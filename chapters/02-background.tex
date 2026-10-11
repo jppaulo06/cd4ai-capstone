@@ -5,6 +5,85 @@
 \textbf{Draft outline.} Discuss continuous delivery, regression testing,
 AI-enabled systems, and the literature that motivates CD4AI.
 
+% TODO: Define foundation models here, using Bommasani:FoundationModels:2021.
+% Distinguish foundation models from pretrained models in general, and explain
+% the role of language foundation models in the applications discussed later.
+% Once this explanation is written, replace the definition currently opening
+% Section 4.1 (sec:cd4ai-context) with a reference to this chapter, keeping the
+% application-development context in Chapter 4.
+
 % Temporary citation example; replace this paragraph when drafting the chapter.
 The existing work-plan bibliography includes a book on continuous
 delivery~\cite{Humble:ContinuousDelivery:2010}.
+
+\section{Testing and Evaluation Terminology}
+\label{sec:background-evaluation}
+
+The terms \emph{test} and \emph{evaluation} overlap in AI engineering practice.
+For example, \textcite{Grace:DemystifyingEvals:2026} describe an evaluation,
+often abbreviated to \emph{eval}, as a test that supplies an input to an AI
+system and assesses its output using grading logic. The terminology below
+establishes a convention for this thesis rather than a universal distinction
+between the two terms.
+
+\subsection{Evaluations, Cases, and Tests}
+
+\begin{description}
+  \item[Evaluation.] The assessment of application behavior against specified
+    criteria. Results may include scores, pass/fail judgments, and summaries
+    across cases or repeated executions.
+  \item[Evaluation case.] A retained input or scenario, the context needed to
+    exercise it, and criteria for assessing the resulting behavior. An expected
+    outcome may be expressed through assertions or a rubric rather than a
+    single reference answer.
+  \item[Test.] An executable check of expected behavior that may be used within
+    an evaluation. Calling a check a test does not imply that the application
+    or the assessment method is deterministic.
+  \item[Evaluation suite.] A collection of cases used to assess selected
+    behaviors or capabilities. A dataset may store cases, while executing an
+    evaluation also requires an application, an execution procedure, and a
+    means of assessing the results.
+\end{description}
+
+This thesis uses \emph{evaluation} as the general term for behavioral assessment
+and retains \emph{testing} when discussing executable checks and software
+testing practices. The choice of term does not by itself determine whether a
+result should block deployment.
+
+\subsection{Confirmation, Capability, and Regression Evaluation}
+\label{sec:background-evaluation-purpose}
+
+Confirmation testing assesses whether a proposed fix resolves an identified
+defect. Regression testing checks for adverse effects of changes on existing
+behavior~\cite[Section~2.2.3]{ISTQB:FoundationSyllabus:2024}. These purposes
+should be distinguished from the time at which a case is written: a test
+intended for regression protection may be created before the defect is fixed,
+and a newly written test may expose a regression that has already occurred.
+
+In the context of agents, \textcite{Grace:DemystifyingEvals:2026} distinguish
+capability evaluations, which assess abilities that may still need improvement,
+from regression evaluations, which check whether established capabilities are
+preserved. They also describe how cases initially used to guide improvement
+can later support regression evaluation as the system becomes capable of
+handling them.
+
+Accordingly, a case documenting an unresolved defect remains useful even if it
+currently fails. It can record the desired behavior and help assess proposed
+fixes. Once that behavior is established, the same case can help detect its
+deterioration under later changes. A continuing failure on a known unresolved
+defect does not, by itself, demonstrate a new regression.
+
+\subsection{Retained Cases and Deployment Decisions}
+
+For CD4AI, retaining an evaluation case and deciding whether its result blocks
+deployment are separate decisions. Cases for unresolved defects should retain
+their expected behavior and make the unresolved status visible. Depending on
+the application's acceptance policy, such a failure may block a release or be
+reported as a known limitation whose resolution has been deferred. Retaining
+the case does not mean that the defect has been fixed or that the observed
+incorrect behavior has become acceptable.
+
+In the title of this thesis, \emph{continuous evaluation} refers to assessment
+repeatedly integrated into the delivery and feedback cycle. It does not require
+uninterrupted execution or a particular evaluation framework. The cycle
+supports evaluation of improvements as well as detection of regressions.

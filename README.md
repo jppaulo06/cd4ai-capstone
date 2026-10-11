@@ -1,5 +1,7 @@
 # CD4AI — Monograph
 
+Working title: **CD4AI: A Pattern for Continuous Evaluation of AI-Enabled Systems**.
+
 English MAC0499 capstone monograph at IME/USP, using the IME LaTeX template
 in undergraduate (`tcc`) mode. The Portuguese resumo is in a separate file.
 The current text is a writing scaffold, not a completed thesis.

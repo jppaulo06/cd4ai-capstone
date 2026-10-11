@@ -22,6 +22,38 @@ three CD4AI stages, and the connections and limitations of the feedback loop.
     maintainers explicitly adopted the pattern.
 \end{itemize}
 
+\subsection{Questions for Examining the Proposed Refinement}
+\label{sec:cases-evaluation-purpose}
+
+The next review of DeepEval/Confident AI, Braintrust, and MLflow will examine
+how their documented workflows support the distinction proposed in
+Section~\ref{sec:cd4ai-result-interpretation}. The analysis should separate
+evidence for the feedback loop from evidence for interpreting failures and
+making delivery decisions.
+
+\begin{itemize}
+  \item What is retained after review: an interaction, a confirmed defect,
+    or an executable evaluation case with explicit criteria?
+  \item How are expected behavior, unresolved limitations, and previously
+    established behavior represented?
+  \item How does an evaluation result distinguish a persistent limitation
+    from deterioration relative to an accepted reference?
+  \item What happens to a failing case: does it block delivery, contribute to
+    a comparative score, or remain a reported limitation?
+  \item Is there evidence that a case changes purpose after an improvement
+    is confirmed, and who makes that decision?
+  \item Which choices are configurable mechanisms, such as dataset partitions,
+    baselines, thresholds, and reporting, rather than requirements of CD4AI?
+\end{itemize}
+
+For each question, record the source and distinguish documented mechanisms
+from observed team practices and our interpretation. Where the available
+material does not answer a question, report it as not documented rather than
+assuming the behavior is either present or absent. In particular, support for
+multiple datasets does not establish that a team separates capability and
+regression evaluations. Preserve the dated source snapshots and identify
+newer documentation separately when extending the analyses.
+
 \section{Divination}
 \label{sec:case-divination}
 % Source: ../tcc-docs/cases/divination/README.md.
