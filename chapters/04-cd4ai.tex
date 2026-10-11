@@ -68,20 +68,18 @@ creating a case does not imply that the corresponding defect has been fixed.
 \section{Overview of the Feedback Loop}
 \label{sec:cd4ai-overview}
 
-CD4AI maintains an evolving evaluation suite informed by observed application
-behavior. Selected interactions are reviewed to establish expected behavior
-and prepare reusable cases. These cases are exercised against subsequent
-application versions, and the results inform development and delivery
-decisions. The pattern assigns three responsibilities:
+CD4AI uses failures found during use to improve the evaluations run before
+future deployments. The team repeats three stages:
 
 \begin{description}
-  \item[Evaluation.] Exercise application versions against retained cases and
-    interpret the results as evidence about capabilities, unresolved
-    limitations, and changes in established behavior.
-  \item[Monitoring.] Collect interactions during use and identify behavior
-    worth investigating, producing candidates for review.
-  \item[Curation.] Review selected interactions, determine the desired behavior,
-    and prepare reusable evaluation cases with explicit assessment criteria.
+  \item[Evaluation.] Run the existing evaluation cases against a proposed
+    change. Apply the team's delivery policy to decide whether the results
+    permit deployment or require further work.
+  \item[Monitoring.] Observe the deployed application and collect interactions
+    that may reveal failures for the team to investigate.
+  \item[Curation.] Review these interactions to identify actual problems.
+    Turn selected problems into evaluation cases that specify the expected
+    behavior and how to check it.
 \end{description}
 
 Figure~\ref{fig:cd4ai-feedback-loop} summarizes the transitions between these
@@ -96,28 +94,25 @@ stages and the return of curated cases to evaluation.
   \label{fig:cd4ai-feedback-loop}
 \end{figure}
 
+The new cases are added to the evaluation suite and run against proposed fixes
+and later changes, closing the loop. Failures discovered during use therefore
+become part of what the team checks before future deployments.
+
 Application changes, including defect fixes, are implemented through the team's
 development process and assessed in the evaluation stage. Curation specifies cases
 and expected behavior; it does not itself repair the application. The diagram
 summarizes the flow of evaluation evidence rather than every development activity.
 
-The connections between stages are essential. A stored interaction must become
-a case that can be exercised and assessed; the retained case must participate
-in subsequent evaluations; and the results must inform a development or
-delivery decision. Collecting logs or creating a dataset without these
-connections does not establish the feedback loop.
+CD4AI requires an explicit policy for how evaluation results inform development
+and delivery decisions. Each implementation defines which outcomes prevent
+deployment and how other results inform tracking and improvement. Cases may
+track known limitations or protect established behavior against regressions,
+without being divided into fixed groups of required and optional cases.
 
-The pattern distinguishes three decisions: what evidence to retain, how to
-interpret evaluation results, and what action those results warrant. Retaining
-a case does not imply that its expected behavior has already been achieved,
-and observing a failure does not by itself identify a new regression. An
-explicit acceptance policy determines which results block delivery.
-
-\noindent\emph{Working refinement.} The distinction between known limitations
-and deterioration in established behavior is proposed here as a responsibility
-of result interpretation. Chapter~\ref{chap:case-studies} will examine the
-extent to which each documented workflow supports it, separately from the
-evidence for the three-stage feedback loop itself.
+The following example follows one case from the discovery of a problem to
+regression protection. The subsequent sections explain how each stage works,
+including how teams assess variable results, define the conditions for
+deployment, and manage evaluation costs.
 
 \subsection{Following a Failure through the Cycle}
 \label{sec:cd4ai-dynamics}
@@ -128,6 +123,8 @@ During curation, a reviewer confirms the defect, identifies the relevant policy,
 and prepares a case describing the input, necessary context, and expected
 behavior. The case is retained even if the team cannot immediately fix the
 application. Its evaluation result makes the unresolved limitation visible.
+The team's delivery policy determines whether that result blocks deployment
+or whether resolution can be deferred while the limitation remains tracked.
 
 When a developer proposes a change, the case helps assess whether the desired
 behavior has been achieved. Other retained cases help assess the effects on
@@ -136,31 +133,96 @@ evaluation criteria, the case can then be used to protect that behavior during
 later changes. A subsequent failure calls for investigation of a possible
 regression, taking execution and assessment variability into account.
 
-This example illustrates the proposed process rather than an observed result.
-The same retained case supports different evaluation purposes over time;
-the process does not require separate copies of it for each purpose.
+In this hypothetical example, the input and expected behavior of the case
+remain the same, but the reason for running it changes. Initially, it records
+an unresolved limitation. When a fix is proposed, it helps check whether the
+fix works. After the fix is confirmed, it helps detect whether later changes
+reintroduce the problem.
 
-\section{Evaluation}
-\label{sec:cd4ai-testing}
+\section{Monitoring: Finding Candidate Problems}
+\label{sec:cd4ai-monitoring}
 
-\subsection{Evaluation Cases and Expected Behavior}
+\subsection{Observing Interactions}
 \begin{itemize}
+  \item Describe what information can help reconstruct behavior during use:
+    inputs, outputs, retrieved context, tool calls, and user feedback.
+  \item Explain how the available observations constrain subsequent review.
+\end{itemize}
+
+\subsection{Selecting Candidates for Review}
+\begin{itemize}
+  \item Describe candidate signals, such as negative feedback, unexpected tool
+    behavior, and guardrail violations, alongside sampling of interactions.
+  \item Explain the trade-off between broad discovery and review effort, and
+    distinguish a suspected failure from a confirmed defect.
+\end{itemize}
+
+\section{Curation: Turning Observations into Evaluation Cases}
+\label{sec:cd4ai-curation}
+
+\subsection{Reviewing Candidate Interactions}
+\begin{itemize}
+  \item Explain how human review, AI-assisted review, or a combination can assess
+    selected interactions and distinguish defects from noise.
+  \item Describe the role of expected behavior and review rationales; discuss
+    uncertain judgments and evaluator limitations.
+\end{itemize}
+
+\subsection{Preparing Evaluation Cases}
+\begin{itemize}
+  \item Explain how a confirmed defect becomes a reusable input or scenario with
+    an expected behavior and an evaluation criterion.
   \item Explain how cases prepared for expected behavior complement cases
     derived from previously observed failures, including unresolved defects
     and cases retained for regression protection.
   \item Describe the input, relevant context, expected behavior, and evaluation
     criterion needed to make a retained case useful.
+  \item Explain how the case remains linked to its originating observation
+    and review.
 \end{itemize}
 
-\subsection{Evaluation Criteria and Variability}
+\subsection{Recording Known Limitations and Maintaining Cases}
+\begin{itemize}
+  \item Describe how to record a known unresolved limitation without treating
+    the current behavior as the expected behavior.
+  \item Discuss how cases are selected and maintained as the suite grows,
+    including duplicate cases and changing requirements.
+  \item Explain how to keep expected behavior and known defect status up to
+    date so that later results can be interpreted.
+\end{itemize}
+
+\subsection{Returning Cases to Evaluation}
+\begin{itemize}
+  \item Make the handoff explicit: recording a review does not by itself add a
+    case to the evaluation suite.
+  \item Describe manual and automated ways to retain the case, evaluate a fix,
+    and check subsequent changes.
+\end{itemize}
+
+\section{Evaluation: Assessing Changes and Supporting Delivery}
+\label{sec:cd4ai-testing}
+
+\subsection{Assessment Criteria and Variability}
 \begin{itemize}
   \item Clarify how tests and evaluations are used in this chapter, drawing on
     the terminology introduced in Section~\ref{sec:background-evaluation}.
   \item Discuss possible checks and evaluators, including their limitations when
     several outputs are acceptable or responses vary between runs.
+  \item Distinguish intermittent application failures from inconsistent grading
+    and execution errors. A failed run requires interpretation before it can
+    be attributed to an application defect or a regression.
+  \item Explain how repeated trials can help assess reliability, drawing on
+    \textcite{Grace:DemystifyingEvals:2026}. Specify trial counts and acceptance
+    criteria in advance rather than rerunning a case until it passes.
+  \item Explain how observed variability affects confidence in a proposed fix
+    and comparisons with a baseline. One successful run does not establish
+    that an intermittent defect has been resolved.
+  \item Connect the required level of reliability to the delivery policy.
+    Intermittent failure does not automatically make a result non-blocking;
+    deferring a confirmed defect requires an explicit decision about its risk.
 \end{itemize}
 
-\subsection{Interpreting Results across Changes}
+\subsection{Known Limitations and Regression Protection}
 \label{sec:cd4ai-result-interpretation}
 
 A case documenting an unresolved defect can guide improvement; exercising it
@@ -186,71 +248,67 @@ identified separately. The implementation must also account for variability
 in the application and its evaluators before attributing a difference to the
 proposed change.
 
-\subsection{Integration with the Delivery Pipeline}
+\subsection{Delivery Policy}
+\label{sec:cd4ai-delivery-policy}
 
-The acceptance policy specifies how evaluation evidence affects delivery.
+The delivery policy specifies how evaluation evidence affects development and
+release decisions. CD4AI requires this connection to be explicit, while leaving
+the decision rules and their enforcement to each implementation. A policy may
+use requirements for individual cases, thresholds across a suite, comparisons
+against an accepted baseline, or defined human review procedures. It should
+identify the conditions for deployment and the action to take when those
+conditions are not met.
+
 A critical unmet requirement may block release even when the defect is already
-known. Other unresolved limitations may be reported separately under an explicit
-decision to defer their resolution. Such a decision does not change the expected
-behavior or establish that the defect has been fixed.
+known. Other unresolved limitations may be reported under an explicit decision
+to defer their resolution. Such a decision does not change the expected behavior
+or establish that the defect has been fixed.
 
-The pattern leaves the organization and enforcement mechanisms to the
-implementation. Teams may use separate suites, metadata, or filtered views to
-distinguish evaluation purposes. They may apply absolute requirements,
-comparisons against an accepted baseline, or both. Likewise, some evaluations
-may block delivery while others inform improvement work. The shared
-responsibility is to make the interpretation and resulting decision explicit;
-exactly two datasets or a universal numerical threshold are not requirements.
+Evaluation purpose and release requirements are separate decisions. A case
+that tracks a known limitation may still enforce a critical requirement.
+A case used for regression protection may allow variation within an explicitly
+defined tolerance. Non-blocking results remain visible and inform follow-up
+work; they are not equivalent to successful results. An evaluation whose result
+does not block deployment may still be required to run and undergo review.
 
-\section{Monitoring}
-\label{sec:cd4ai-monitoring}
+Teams may use separate suites, metadata, or filtered views to
+distinguish evaluation purposes. Blocking and non-blocking outcomes describe
+the effect of results under the policy, rather than two mandatory categories
+of cases. A policy may require all assessed cases to pass or permit some failures
+under stated conditions. The shared responsibility is to make the interpretation
+and resulting decision explicit; exactly two datasets or a universal numerical
+threshold are not requirements.
 
-\subsection{Observing Interactions}
+\noindent\emph{Working refinement.} The explicit delivery policy is proposed
+here as a responsibility of the pattern. Chapter~\ref{chap:case-studies} will
+examine how documented workflows connect evaluation results to decisions and
+which mechanisms they provide for interpreting known limitations and potential
+regressions. These questions will be examined separately from the evidence for
+the three-stage feedback loop, without assuming a common division of cases.
+
+\subsection{Execution Cost and Frequency}
+\label{sec:cd4ai-evaluation-cost}
 \begin{itemize}
-  \item Describe what information can help reconstruct behavior during use:
-    inputs, outputs, retrieved context, tool calls, and user feedback.
-  \item Explain how the available observations constrain subsequent review.
+  \item Discuss the cost of application runs, model-based grading, repeated
+    trials, and execution time as the suite grows. Distinguish the cost of
+    running evaluations from the operating cost of the evaluated application.
+  \item Explain how teams can choose what to run for a proposed change based
+    on affected behavior, risk, and available resources. A focused check on a
+    proposed fix should be complemented by checks for effects on other behavior.
+  \item Illustrate a possible schedule: a smaller set on each pull request,
+    with broader or more expensive evaluations before release or at scheduled
+    intervals. Present this as an implementation option, not a mandatory
+    schedule or a practice established by the case studies.
+  \item Keep execution frequency separate from release requirements. Expensive
+    evaluations may still be required before deployment; moving them to a
+    later pipeline stage does not make their outcomes non-blocking.
+  \item Make omitted cases and missing or outdated results visible. Not running
+    a case supplies no fresh evidence that its expected behavior is preserved.
+    Explain the trade-off between lower execution cost and delayed discovery
+    of deterioration.
 \end{itemize}
 
-\subsection{Selecting Candidates for Review}
-\begin{itemize}
-  \item Describe candidate signals, such as negative feedback, unexpected tool
-    behavior, and guardrail violations, alongside sampling of interactions.
-  \item Explain the trade-off between broad discovery and review effort, and
-    distinguish a suspected failure from a confirmed defect.
-\end{itemize}
-
-\section{Curation}
-\label{sec:cd4ai-curation}
-
-\subsection{Reviewing Candidate Interactions}
-\begin{itemize}
-  \item Explain how human review, AI-assisted review, or a combination can assess
-    selected interactions and distinguish defects from noise.
-  \item Describe the role of expected behavior and review rationales; discuss
-    uncertain judgments and evaluator limitations.
-\end{itemize}
-
-\subsection{Preparing Evaluation Cases}
-\begin{itemize}
-  \item Explain how a confirmed defect becomes a reusable input or scenario with
-    an expected behavior and an evaluation criterion.
-  \item Discuss which context must be retained and how cases are selected and
-    maintained as the suite grows.
-\end{itemize}
-
-\subsection{Returning Cases to Evaluation}
-\begin{itemize}
-  \item Make the handoff explicit: recording a review does not by itself add a
-    case to the evaluation suite.
-  \item Describe manual and automated ways to retain the case, evaluate a fix,
-    and check subsequent changes.
-  \item Explain how the case remains linked to its originating observation,
-    review, expected behavior, and known defect status so that later results
-    can be interpreted.
-\end{itemize}
-
-\section{Forces}
+\section{Forces and Design Trade-offs}
 \label{sec:cd4ai-forces}
 
 \noindent\emph{Working formulation: the following forces will be revisited

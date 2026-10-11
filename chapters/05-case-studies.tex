@@ -20,16 +20,21 @@ three CD4AI stages, and the connections and limitations of the feedback loop.
     screenshots, and executed observations. Record source dates and revisions.
   \item Explain that mapping a workflow to CD4AI does not imply that its
     maintainers explicitly adopted the pattern.
+  \item Identify variations in how results inform development and delivery
+    decisions. Support for blocking a release does not by itself establish
+    the monitoring--curation--evaluation feedback loop.
 \end{itemize}
 
-\subsection{Questions for Examining the Proposed Refinement}
+\subsection{Evaluation Results and Delivery Decisions}
 \label{sec:cases-evaluation-purpose}
 
 The next review of DeepEval/Confident AI, Braintrust, and MLflow will examine
-how their documented workflows support the distinction proposed in
-Section~\ref{sec:cd4ai-result-interpretation}. The analysis should separate
-evidence for the feedback loop from evidence for interpreting failures and
-making delivery decisions.
+how their documented workflows connect evaluation evidence to development and
+delivery decisions, following Section~\ref{sec:cd4ai-delivery-policy}. The analysis
+should identify the rules and mechanisms each workflow supports, without
+assuming that all workflows divide cases into required and optional groups.
+Evidence for the feedback loop should be distinguished from evidence for
+interpreting results and applying a delivery policy.
 
 \begin{itemize}
   \item What is retained after review: an interaction, a confirmed defect,
@@ -38,8 +43,12 @@ making delivery decisions.
     established behavior represented?
   \item How does an evaluation result distinguish a persistent limitation
     from deterioration relative to an accepted reference?
-  \item What happens to a failing case: does it block delivery, contribute to
-    a comparative score, or remain a reported limitation?
+  \item Which evaluation outcomes block delivery, and which inform tracking,
+    review, or improvement without blocking it? What rules determine those
+    effects, and who applies them?
+  \item Does the decision depend on individual cases, aggregate scores,
+    comparisons with an accepted baseline, human review, or a combination?
+    Can an evaluation be required to run even when its result is non-blocking?
   \item Is there evidence that a case changes purpose after an improvement
     is confirmed, and who makes that decision?
   \item Which choices are configurable mechanisms, such as dataset partitions,
@@ -51,8 +60,12 @@ from observed team practices and our interpretation. Where the available
 material does not answer a question, report it as not documented rather than
 assuming the behavior is either present or absent. In particular, support for
 multiple datasets does not establish that a team separates capability and
-regression evaluations. Preserve the dated source snapshots and identify
-newer documentation separately when extending the analyses.
+regression evaluations, and configurable delivery rules do not establish that
+a team uses fixed blocking and non-blocking groups. Describe a documented
+workflow as a variation of CD4AI only to the extent that its stages and
+connections support that mapping; tool capabilities alone do not establish
+an implemented workflow. Preserve the dated source snapshots and identify newer
+documentation separately when extending the analyses.
 
 \section{Divination}
 \label{sec:case-divination}
