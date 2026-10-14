@@ -106,8 +106,9 @@ summarizes the flow of evaluation evidence rather than every development activit
 CD4AI requires an explicit policy for how evaluation results inform development
 and delivery decisions. Each implementation defines which outcomes prevent
 deployment and how other results inform tracking and improvement. Cases may
-track known limitations or protect established behavior against regressions,
-without being divided into fixed groups of required and optional cases.
+track known limitations or protect established behavior against regressions.
+Section~\ref{sec:cd4ai-delivery-policy} discusses how teams can define and
+apply this policy.
 
 The following example follows one case from the discovery of a problem to
 regression protection. The subsequent sections explain how each stage works,
@@ -142,12 +143,10 @@ reintroduce the problem.
 \section{Monitoring: Finding Candidate Problems}
 \label{sec:cd4ai-monitoring}
 
-\subsection{Observing Interactions}
-\begin{itemize}
-  \item Describe what information can help reconstruct behavior during use:
-    inputs, outputs, retrieved context, tool calls, and user feedback.
-  \item Explain how the available observations constrain subsequent review.
-\end{itemize}
+To achieve our objective of creating evaluations based on real production
+problems, it is valuable to have an effective monitoring layer.
+This section explains strategies that can be used to detect
+potential defects in production.
 
 \subsection{Selecting Candidates for Review}
 \begin{itemize}
@@ -156,6 +155,32 @@ reintroduce the problem.
   \item Explain the trade-off between broad discovery and review effort, and
     distinguish a suspected failure from a confirmed defect.
 \end{itemize}
+
+\subsection{Observing Interactions}
+
+% Here we need to explain what information to collect about candidate
+% interactions, right? What information is needed to review a candidate
+% during curation?
+% I would say that, at a minimum, everything the agent received is important,
+% since during curation we will assess whether the agent's output makes sense.
+%
+% - What did the application receive? Input, conversation history, retrieved
+% context, and tool responses.
+% - What did it do? Outputs, tool calls, and relevant actions.
+% - Why does the interaction deserve review? User feedback, an unexpected
+%   outcome, or another selection signal.
+
+
+We need to store enough information for a reviewer to reconstruct and assess
+the relevant behavior. This includes the relevant context available to the
+AI and the outputs it produced while performing its tasks. Examples include
+inputs, conversation history, retrieved context, tool responses, outputs, and
+tool calls.
+
+If information is missing, curation may become more difficult because reviewers
+may lack the context needed to assess the AI's decision. For example, if we
+do not know which tool description an agent received, it may be hard to
+assess whether the tool call was appropriate in that situation.
 
 \section{Curation: Turning Observations into Evaluation Cases}
 \label{sec:cd4ai-curation}
