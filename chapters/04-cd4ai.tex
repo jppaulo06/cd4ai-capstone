@@ -149,12 +149,61 @@ This section explains strategies that can be used to detect
 potential defects in production.
 
 \subsection{Selecting Candidates for Review}
-\begin{itemize}
-  \item Describe candidate signals, such as negative feedback, unexpected tool
-    behavior, and guardrail violations, alongside sampling of interactions.
-  \item Explain the trade-off between broad discovery and review effort, and
-    distinguish a suspected failure from a confirmed defect.
-\end{itemize}
+
+Candidate selection aims to find problematic interactions while keeping the
+review workload manageable. Sending many interactions without defects to
+curation consumes effort that could be spent investigating actual problems.
+However, selecting only the most obvious failures may leave other problems
+undiscovered. CD4AI therefore leaves the selection strategy to each
+implementation, according to the application's risks and the team's capacity
+to review candidates.
+
+Precision and recall help describe these concerns. Adapting their usual
+interpretation in information retrieval~\cite[Section~8.3]{Manning:IR:2008},
+precision is the proportion of selected interactions that contain a problem,
+while recall is the proportion of all problematic interactions in a defined
+population that are selected. The unit here is an interaction: several
+interactions may expose the same underlying defect. These measures describe
+selection quality; they do not establish that a candidate contains a defect
+before it has been reviewed.
+
+Signals provide reasons to investigate an interaction. For example, negative
+user feedback indicates dissatisfaction, but review is still needed to determine
+whether the application behaved incorrectly. A tool call returning an error
+provides another possible signal. An external service might time out, yet the
+application could recover and complete the task successfully. The reviewer
+must therefore consider how the application handled the error and whether the
+resulting behavior was acceptable. These examples illustrate the role of
+signals; their construction and interpretation depend on the application.
+Other signals may come from guardrails, automated checks, or AI-assisted
+assessment. Interactions may also be selected through sampling, even when no
+signal has flagged them as suspicious.
+
+Selection involves both the cost of identifying candidates and the effort of
+reviewing them. Applying an expensive assessment to every interaction may be
+impractical. Sampling can limit how many interactions undergo that assessment,
+at the cost of leaving others unexamined. This cost--coverage choice is also
+reflected in production-monitoring documentation, which describes configurable
+sampling rates for automated assessment~\cite{Databricks:ProductionMonitoring}.
+Another implementation option is to use inexpensive checks before a more
+expensive assessment. Such a sequence can reduce the number of expensive
+assessments, but a later stage cannot recover problematic interactions discarded
+by an earlier filter if it examines only the interactions that passed through.
+
+A team could complement signal-based selection by reviewing a sample of
+unflagged interactions to investigate what its signals miss. This is an option
+for implementing CD4AI, rather than a finding from the case studies. Reviewing
+selected interactions alone cannot establish recall, because the number of
+problematic interactions outside that selection remains unknown. Any estimate
+based on sampling must account for how the sample was selected and the
+uncertainty of the estimate; a sample does not reveal every missed problem.
+
+The handoff to curation consists of the selected interaction, the reason for
+its selection, and the evidence needed to review it. That reason may be a
+specific signal or inclusion in a sample. Selection identifies something worth
+investigating; curation determines whether it reveals a defect and whether it
+should become an evaluation case. The following subsection discusses the
+information needed to support that review.
 
 \subsection{Observing Interactions}
 
