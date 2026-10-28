@@ -82,6 +82,10 @@ future deployments. The team repeats three stages:
     behavior and how to check it.
 \end{description}
 
+The same assessment tool may help flag interactions during monitoring,
+review them during curation, and assess application versions during evaluation.
+Its purpose differs at each stage.
+
 Figure~\ref{fig:cd4ai-feedback-loop} summarizes the transitions between these
 stages and the return of curated cases to evaluation.
 
@@ -95,8 +99,8 @@ stages and the return of curated cases to evaluation.
 \end{figure}
 
 The new cases are added to the evaluation suite and run against proposed fixes
-and later changes, closing the loop. Failures discovered during use therefore
-become part of what the team checks before future deployments.
+and later changes, closing the loop. Selected failures discovered during use
+therefore become part of what the team checks before future deployments.
 
 Application changes, including defect fixes, are implemented through the team's
 development process and assessed in the evaluation stage. Curation specifies cases
@@ -112,14 +116,15 @@ apply this policy.
 
 The following example follows one case from the discovery of a problem to
 regression protection. The subsequent sections explain how each stage works,
-including how teams assess variable results, define the conditions for
-deployment, and manage evaluation costs.
+including how teams assess variable results and define the conditions for
+deployment.
 
 \subsection{Following a Failure through the Cycle}
 \label{sec:cd4ai-dynamics}
 
-Consider a hypothetical assistant that gives an incorrect answer about product
-eligibility. Monitoring retains the interaction and flags it for review.
+Consider a hypothetical customer-support assistant that gives an incorrect
+answer about refund eligibility. Monitoring retains the interaction and flags
+it for review.
 During curation, a reviewer confirms the defect, identifies the relevant policy,
 and prepares a case describing the input, necessary context, and expected
 behavior. The case is retained even if the team cannot immediately fix the
@@ -143,10 +148,9 @@ reintroduce the problem.
 \section{Monitoring: Finding Candidate Problems}
 \label{sec:cd4ai-monitoring}
 
-To achieve our objective of creating evaluations based on real production
-problems, it is valuable to have an effective monitoring layer.
-This section explains strategies that can be used to detect
-potential defects in production.
+Monitoring observes the deployed application and supplies candidate interactions
+for review. Candidate selection and the context retained with each interaction
+support the review performed during curation.
 
 \subsection{Selecting Candidates for Review}
 
@@ -198,7 +202,7 @@ its purpose is exploratory. Reviewing only flagged interactions cannot establish
 the signals' recall: the number of problematic interactions left unflagged
 remains unknown.
 
-Consider a hypothetical customer-support assistant. Its monitoring process
+For the hypothetical customer-support assistant, the monitoring process
 forwards conversations with negative user feedback or answers flagged by an
 automated evaluator to curation. Each day, it also selects a random sample of the remaining
 conversations. Both sets enter the same review process: the signals direct
@@ -266,17 +270,20 @@ For an interaction selected for inclusion, curation prepares a reusable case
 that specifies the input or scenario, relevant context, expected behavior,
 and assessment criteria. Expected behavior need not be a single exact output:
 for example, the assistant should explain that a purchase is ineligible for a
-refund, while several phrasings may satisfy that requirement. Assessment may
-use rule-based checks on structured outputs or an LLM acting as a judge that
-assesses a response against a rubric~\parencite{Grace:DemystifyingEvals:2026}.
-Section~\ref{sec:cd4ai-testing} discusses these methods and their limitations.
+refund, while several phrasings may satisfy that requirement. Assessment
+methods include, for example, rule-based checks on structured outputs and
+LLMs acting as judges that assess responses against a
+rubric~\parencite{Grace:DemystifyingEvals:2026}.
+Section~\ref{sec:cd4ai-testing} discusses how the results guide development
+and delivery decisions.
 
 The case should preserve the relevant conditions under which the failure was
 observed, including conversation history, retrieved information, or tool state
 where needed. Omitting relevant context may produce an evaluation that no longer
 exercises the observed problem. Preserving that context does not guarantee that
-an intermittent failure will occur on every run; repeated execution and
-reliability assessment belong to the evaluation stage.
+an intermittent failure will occur on every run. During evaluation, the same
+case can be run multiple times to assess how consistently the application
+meets the expected behavior.
 
 Cases derived from observed failures complement those prepared from the
 application's requirements and may be retained before the defects are fixed.
@@ -303,53 +310,38 @@ are exercised and how their results are interpreted.
 \section{Evaluation: Assessing Changes and Supporting Delivery}
 \label{sec:cd4ai-testing}
 
-% Evaluation is the step of the continuous delivery pipeline which verifies the
-% behavior of the application, and decides whether the proposed change can be
-% deployed or requires further work.
-% Approval of a proposed change requires that the evaluation results meet the
-% team's delivery policy.
-
-% I don't think we need to discuss like "how to create an eval" or "how an eval
-% works", since it is not really the responsability of the pattern. Yet, I
-% think it might be interesting to touch the fact that some evals might never
-% pass -- which then are known issues. The team is responsible for deciding
-% whether these known issues are blocking or not, and for keeping the expected
-% behavior. Different strategies can be used to handle this (I think it would
-% be interesting to put here one or other example).
-% Maybe we could cite one or two examples of evals, just to make it clear?
-% And then tell problems of the evals, but being quite fast on that. Yet, maybe
-% this should be explored in the background chapter, since it is not really the
-% responsability of the pattern.
+Evaluation exercises an application version against retained cases and
+assesses its behavior using their criteria. The results help the team assess
+proposed fixes, track unresolved limitations, and check whether changes
+preserve established behavior. Within the delivery pipeline, this evidence
+informs whether a proposed change can proceed or requires further work.
 
 \subsection{Known Limitations and Regression Protection}
 \label{sec:cd4ai-result-interpretation}
 
-% When developing this discussion, explain how the record of an unresolved
-% limitation can be kept current without treating observed behavior as expected
-% behavior. Keep case selection and expectation maintenance in curation.
+A failing evaluation does not by itself show whether a proposed change
+introduced a problem or whether an existing limitation remains unresolved.
+Determining whether the change introduced the problem requires evidence about
+the application's previous behavior. When that evidence is unavailable, the
+team may identify a defect without yet determining whether it is a regression.
+The definitions in
+Section~\ref{sec:background-limitations-regressions} support this distinction:
+a known limitation may itself have originated in an earlier regression.
 
-A case documenting an unresolved defect can guide improvement; exercising it
-against a proposed fix supports confirmation; retaining it after the behavior
-is established supports regression protection. These are evaluation purposes,
-not necessarily different data structures or mutually exclusive categories.
-As discussed in Section~\ref{sec:background-evaluation-purpose}, the purpose
-of a case cannot be inferred solely from whether it currently passes or fails.
+Distinguishing continuing problems from new deterioration can help teams
+identify new failures despite existing ones and keep unresolved limitations
+visible. Cases documenting those limitations can also help assess proposed
+fixes and, once the expected behavior is established, check that later changes
+preserve it.
 
-Interpreting a result requires the expected behavior, the application version
-assessed, and the relevant reference evidence. That evidence may include a
-reviewed record of the unresolved defect, results from an accepted baseline,
-or explicit requirements for behavior that must be preserved. A continuing
-failure should remain visible as a limitation; a change from previously
-acceptable behavior should be investigated as potential deterioration.
-Scores may also worsen while remaining below a pass threshold, so a comparison
-should not rely exclusively on binary verdicts.
-
-Where results are compared across versions, the cases, assessment criteria,
-and execution conditions must support a meaningful comparison. New cases
-without reference results and unsuccessful evaluation executions should be
-identified separately. The implementation must also account for variability
-in the application and its evaluators before attributing a difference to the
-proposed change.
+Comparisons require compatible cases, assessment criteria, and execution
+conditions. Variability in the application or its evaluators may require
+repeated executions or further review before attributing a difference to a
+change. Similarly, a single passing run does not establish that an intermittent
+defect has been resolved. Scores may also deteriorate while remaining below a
+pass threshold, so binary outcomes alone may conceal worsening behavior.
+Section~\ref{sec:cd4ai-evaluation-example} illustrates how a team could organize
+and interpret its results before applying a delivery policy.
 
 \subsection{Delivery Policy}
 \label{sec:cd4ai-delivery-policy}
@@ -374,46 +366,74 @@ defined tolerance. Non-blocking results remain visible and inform follow-up
 work; they are not equivalent to successful results. An evaluation whose result
 does not block deployment may still be required to run and undergo review.
 
-Teams may use separate suites, metadata, or filtered views to
-distinguish evaluation purposes. Blocking and non-blocking outcomes describe
-the effect of results under the policy, rather than two mandatory categories
-of cases. A policy may require all assessed cases to pass or permit some failures
-under stated conditions. The shared responsibility is to make the interpretation
-and resulting decision explicit; exactly two datasets or a universal numerical
-threshold are not requirements.
+A policy may require all assessed cases to pass or permit some failures under
+stated conditions. The shared responsibility is to make the interpretation
+and resulting decision explicit.
 
-\noindent\emph{Working refinement.} The explicit delivery policy is proposed
-here as a responsibility of the pattern. Chapter~\ref{chap:case-studies} will
-examine how documented workflows connect evaluation results to decisions and
-which mechanisms they provide for interpreting known limitations and potential
-regressions. These questions will be examined separately from the evidence for
-the three-stage feedback loop, without assuming a common division of cases.
+Chapter~\ref{chap:case-studies} examines how the selected workflows connect
+evaluation results to delivery decisions and which mechanisms they provide
+for interpreting known limitations and potential regressions. The analysis
+distinguishes evidence for these responsibilities from evidence for the
+three-stage feedback loop, without assuming a common division of cases.
 
-% Maybe pass to "discussion" session
-\subsection{Execution Cost and Frequency}
-\label{sec:cd4ai-evaluation-cost}
+\subsection{Example: Interpreting Results and Deciding on Delivery}
+\label{sec:cd4ai-evaluation-example}
 
-% Evaluation can be really costly.
-% But tbh I don't think we should go into too much detail here, since it is not
-% really the responsability of the pattern. Maybe we should remove this one
-% part, or mention it breafly in the discussion chapter.
+Consider a proposed change to the customer-support assistant introduced in
+the monitoring and curation sections. The team keeps its evaluation cases in
+one dataset. Each case specifies a scenario, expected behavior, and assessment
+criteria. For unresolved problems, the team also records the known issue. It
+retains results from an accepted application version as a reference for
+assessing subsequent changes.
 
-\begin{itemize}
-  \item Discuss the cost of application runs, model-based grading, repeated
-    trials, and execution time as the suite grows. Distinguish the cost of
-    running evaluations from the operating cost of the evaluated application.
-  \item Explain how teams can choose what to run for a proposed change based
-    on affected behavior, risk, and available resources. A focused check on a
-    proposed fix should be complemented by checks for effects on other behavior.
-  \item Illustrate a possible schedule: a smaller set on each pull request,
-    with broader or more expensive evaluations before release or at scheduled
-    intervals. Present this as an implementation option, not a mandatory
-    schedule or a practice established by the case studies.
-  \item Keep execution frequency separate from release requirements. Expensive
-    evaluations may still be required before deployment; moving them to a
-    later pipeline stage does not make their outcomes non-blocking.
-  \item Make omitted cases and missing or outdated results visible. Not running
-    a case supplies no fresh evidence that its expected behavior is preserved.
-    Explain the trade-off between lower execution cost and delayed discovery
-    of deterioration.
-\end{itemize}
+% Here we could use something like Fisher to detect if the result is a
+% regression or not.
+
+The dataset includes the case prepared during curation: the assistant should
+explain that a particular purchase is ineligible for a refund. This remains a
+known limitation in the reference version. Two other cases check whether the
+assistant recognizes an eligible purchase and correctly states the refund
+deadline. The proposed change aims to fix the deadline answer.
+
+Table~\ref{tab:cd4ai-evaluation-example} compares the results. The pass/fail
+entries summarize assessments under the same criteria for both versions;
+they need not represent single executions.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Illustrative evaluation results for a proposed change to the
+    customer-support assistant.}
+  \label{tab:cd4ai-evaluation-example}
+  \small
+  \begin{tabular}{@{}
+    >{\raggedright\arraybackslash}p{0.30\linewidth}
+    >{\raggedright\arraybackslash}p{0.14\linewidth}
+    >{\raggedright\arraybackslash}p{0.14\linewidth}
+    >{\raggedright\arraybackslash}p{0.29\linewidth}@{}}
+    \toprule
+    Case & Reference version & Proposed version & Interpretation \\
+    \midrule
+    Explain why a purchase is ineligible & Fail & Fail & Continuing known limitation \\
+    \addlinespace
+    Recognize an eligible purchase & Pass & Fail & Potential regression \\
+    \addlinespace
+    State the refund deadline & Fail & Pass & Evidence supporting the proposed fix \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Both versions fail two cases, but the report shows that their behavior differs.
+The deadline answer has improved, while a previously successful eligibility
+case now fails and requires investigation. The original limitation remains
+visible, with its expected behavior unchanged.
+
+Suppose the team's delivery policy permits the documented ineligibility
+problem to remain temporarily unresolved, but requires previously established
+refund behavior to be preserved. Under this policy, the new failure blocks
+deployment pending investigation and resolution. The improvement to the
+deadline answer does not compensate for that failure.
+
+This example illustrates one implementation of the pattern. Teams may use
+separate suites or other reporting mechanisms to make the same distinctions.
+Cases without reference results and execution errors should be identified
+explicitly so that the team can recognize where evidence is missing.
