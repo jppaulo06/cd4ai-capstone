@@ -2,6 +2,79 @@
 \chapter{Discussion}
 \label{chap:discussion}
 
+% I think "forces and design trade-off" should be in discussion part
+\section{Forces and Design Trade-offs}
+\label{sec:cd4ai-forces}
+
+\noindent\emph{Working formulation: the following forces will be revisited
+as the case studies are developed.}
+
+Testability, robustness, and evolvability are desired qualities that can
+reinforce one another. Testability helps teams assess whether a proposed change
+preserves expected behavior before deployment. Robustness concerns the
+application's ability to maintain acceptable behavior under varying conditions,
+while evolvability concerns its ability to accommodate change. The evaluation
+suite must also evolve to remain useful as the application changes.
+
+These qualities need not oppose one another in every pairwise comparison.
+The forces considered here instead express tensions between desired outcomes
+and the constraints on achieving them. The pattern aims to address three
+such tensions:
+
+\begin{itemize}
+  \item \textbf{Confidence in changes and delivery speed:} teams need evidence
+    that changes preserve expected behavior, but running more extensive
+    evaluations requires execution time and maintenance effort. The validation
+    process must fit the time and resources available for frequent delivery.
+  \item \textbf{Failure discovery and review capacity:} teams need to discover
+    failures beyond those covered by existing tests, but collecting more
+    candidate interactions increases the curation workload. Broad discovery
+    must be balanced with the capacity to review candidates and prepare useful
+    evaluation cases.
+  \item \textbf{Behavior preservation and adaptation:} historical regression
+    cases help check established behavior, but changing requirements can make
+    some expectations outdated. Teams must distinguish unintended regressions
+    from intended changes and maintain the suite accordingly.
+\end{itemize}
+
+Evaluation, monitoring, and curation work together to address these tensions.
+Evaluation supplies evidence about proposed changes, monitoring supplies
+interactions for investigation, and curation determines which interactions
+should become evaluation cases and what behavior those cases should check.
+The cycle does not remove the costs or trade-offs; its implementation must
+establish how these responsibilities fit the team's delivery process.
+
+% Writing notes:
+% Keep the desired qualities distinct from the concrete tensions above.
+% Do not claim that greater testability necessarily lowers robustness or
+% evolvability. Better testing can support both.
+% Validate this working formulation against Chapter 5: look for evidence of
+% evaluation cost, candidate selection, review workload, and changes to expected
+% behavior. Do not present these as findings before examining the evidence.
+% Explain how the stages address the tensions without forcing a one-to-one
+% correspondence between a stage and a force. Connected paragraphs are enough;
+% pairwise-comparison subsections are not necessary.
+% Pattern-writing guidance discussed during review:
+% https://www.hillside.net/index.php/a-pattern-language-for-pattern-writing
+% Add a formal citation if this guidance is used in the final argument.
+
+
+% I think "consequences and limitations" should be in discussion part
+\section{Consequences and Limitations}
+\label{sec:cd4ai-consequences}
+
+\begin{itemize}
+  \item Discuss the intended benefit of an evaluation suite informed by actual
+    use, separating expected benefits from measured outcomes.
+  \item Discuss the costs of observation, review, and maintaining and running
+    the growing suite.
+  \item Explain limits arising from unobserved interactions, missed signals,
+    reviewer errors, and variable behavior. Avoid guarantees of complete
+    coverage or prevention of every recurrence.
+  \item Introduce the case studies as an examination of how these responsibilities
+    and connections appear in different systems and workflows.
+\end{itemize}
+
 \textbf{Draft outline.} Compare the cases, discuss the research question,
 and explain limitations and threats to validity.
 

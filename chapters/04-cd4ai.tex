@@ -150,75 +150,67 @@ potential defects in production.
 
 \subsection{Selecting Candidates for Review}
 
-Candidate selection aims to find problematic interactions while keeping the
-review workload manageable. Sending many interactions without defects to
-curation consumes effort that could be spent investigating actual problems.
-However, selecting only the most obvious failures may leave other problems
-undiscovered. CD4AI therefore leaves the selection strategy to each
-implementation, according to the application's risks and the team's capacity
-to review candidates.
+Monitoring selects interactions for curation using signals of possible
+problems, sampling, or a combination of both. Figure~\ref{fig:cd4ai-candidate-selection}
+illustrates this selection and the handoff to curation.
 
-Precision and recall help describe these concerns. Adapting their usual
-interpretation in information retrieval~\cite[Section~8.3]{Manning:IR:2008},
-precision is the proportion of selected interactions that contain a problem,
-while recall is the proportion of all problematic interactions in a defined
-population that are selected. The unit here is an interaction: several
-interactions may expose the same underlying defect. These measures describe
-selection quality; they do not establish that a candidate contains a defect
-before it has been reviewed.
+A \emph{signal} is an observable indication that an interaction may contain a
+problem and deserves review. Examples include negative user feedback and an
+automated evaluator flagging an answer as unsupported by the retrieved
+information~\parencite{MLflow:RetrievalGroundedness}. Neither confirms a defect:
+feedback may express dissatisfaction with correct behavior, and the evaluator
+may misjudge the answer. Signal design depends on the application; curation
+determines whether a selected interaction reveals a defect.
 
-Signals provide reasons to investigate an interaction. For example, negative
-user feedback indicates dissatisfaction, but review is still needed to determine
-whether the application behaved incorrectly. A tool call returning an error
-provides another possible signal. An external service might time out, yet the
-application could recover and complete the task successfully. The reviewer
-must therefore consider how the application handled the error and whether the
-resulting behavior was acceptable. These examples illustrate the role of
-signals; their construction and interpretation depend on the application.
-Other signals may come from guardrails, automated checks, or AI-assisted
-assessment. Interactions may also be selected through sampling, even when no
-signal has flagged them as suspicious.
+\begin{figure}[htbp]
+  \centering
+  \input{figures/cd4ai-candidate-selection}
+  \caption{Candidate selection within monitoring. Solid arrows show the flow
+    of interactions toward curation; dashed arrows indicate what guides
+    selection.}
+  \label{fig:cd4ai-candidate-selection}
+\end{figure}
 
-Selection involves both the cost of identifying candidates and the effort of
-reviewing them. Applying an expensive assessment to every interaction may be
-impractical. Sampling can limit how many interactions undergo that assessment,
-at the cost of leaving others unexamined. This cost--coverage choice is also
-reflected in production-monitoring documentation, which describes configurable
-sampling rates for automated assessment~\cite{Databricks:ProductionMonitoring}.
-Another implementation option is to use inexpensive checks before a more
-expensive assessment. Such a sequence can reduce the number of expensive
-assessments, but a later stage cannot recover problematic interactions discarded
-by an earlier filter if it examines only the interactions that passed through.
+Precision and recall help describe selection
+quality~\parencite[Section~8.3]{Manning:IR:2008}. For a defined population,
+counting interactions rather than distinct defects:
+\begin{gather*}
+  \text{Precision} =
+  \frac{\text{Number of selected problematic interactions}}
+       {\text{Number of selected interactions}} \\[1ex]
+  \text{Recall} =
+  \frac{\text{Number of selected problematic interactions}}
+       {\text{Number of problematic interactions}}
+\end{gather*}
+Low precision means a larger share of selected interactions consumes review
+effort without revealing defects. Low recall means a larger share of problematic
+interactions is missed. These measures help teams reason about selection
+quality in relation to review capacity and application risks; CD4AI does not
+require continuous measurement or prescribe numerical targets.
 
-A team could complement signal-based selection by reviewing a sample of
-unflagged interactions to investigate what its signals miss. This is an option
-for implementing CD4AI, rather than a finding from the case studies. Reviewing
-selected interactions alone cannot establish recall, because the number of
-problematic interactions outside that selection remains unknown. Any estimate
-based on sampling must account for how the sample was selected and the
-uncertainty of the estimate; a sample does not reveal every missed problem.
+Execution cost also constrains selection. A team may run an expensive automated
+assessment on a sample of interactions rather than on every interaction, trading
+coverage for lower execution cost~\parencite{Databricks:ProductionMonitoring}.
+Reviewing a sample of unflagged interactions can help investigate what the
+signals miss. Finding
+few defects in that sample does not necessarily indicate poor selection, since
+its purpose is exploratory. Reviewing only flagged interactions cannot establish
+the signals' recall: the number of problematic interactions left unflagged
+remains unknown.
 
-The handoff to curation consists of the selected interaction, the reason for
-its selection, and the evidence needed to review it. That reason may be a
-specific signal or inclusion in a sample. Selection identifies something worth
-investigating; curation determines whether it reveals a defect and whether it
-should become an evaluation case. The following subsection discusses the
-information needed to support that review.
+Consider a hypothetical customer-support assistant. Its monitoring process
+forwards conversations with negative user feedback or answers flagged by an
+automated evaluator to curation. Each day, it also selects a random sample of the remaining
+conversations. Both sets enter the same review process: the signals direct
+attention to suspected problems, while sampling explores interactions that
+those signals did not flag. A sampled conversation might reveal an incorrect
+answer that the evaluator did not flag and the user did not rate negatively.
+
+The selected interactions are reviewed during curation, where they may become
+evaluation cases. The following subsection discusses information that can
+support this review.
 
 \subsection{Observing Interactions}
-
-% Here we need to explain what information to collect about candidate
-% interactions, right? What information is needed to review a candidate
-% during curation?
-% I would say that, at a minimum, everything the agent received is important,
-% since during curation we will assess whether the agent's output makes sense.
-%
-% - What did the application receive? Input, conversation history, retrieved
-% context, and tool responses.
-% - What did it do? Outputs, tool calls, and relevant actions.
-% - Why does the interaction deserve review? User feedback, an unexpected
-%   outcome, or another selection signal.
-
 
 We need to store enough information for a reviewer to reconstruct and assess
 the relevant behavior. This includes the relevant context available to the
@@ -234,70 +226,107 @@ assess whether the tool call was appropriate in that situation.
 \section{Curation: Turning Observations into Evaluation Cases}
 \label{sec:cd4ai-curation}
 
+Curation reviews interactions selected during monitoring and prepares those
+worth retaining as reusable evaluation cases. It establishes the expected
+behavior and criteria for assessing it, so that observations from use can
+inform subsequent evaluations.
+
 \subsection{Reviewing Candidate Interactions}
-\begin{itemize}
-  \item Explain how human review, AI-assisted review, or a combination can assess
-    selected interactions and distinguish defects from noise.
-  \item Describe the role of expected behavior and review rationales; discuss
-    uncertain judgments and evaluator limitations.
-\end{itemize}
 
-\subsection{Preparing Evaluation Cases}
-\begin{itemize}
-  \item Explain how a confirmed defect becomes a reusable input or scenario with
-    an expected behavior and an evaluation criterion.
-  \item Explain how cases prepared for expected behavior complement cases
-    derived from previously observed failures, including unresolved defects
-    and cases retained for regression protection.
-  \item Describe the input, relevant context, expected behavior, and evaluation
-    criterion needed to make a retained case useful.
-  \item Explain how the case remains linked to its originating observation
-    and review.
-\end{itemize}
+Review determines whether the observed behavior met the relevant requirements
+or expectations. A monitoring signal alone does not establish that a defect
+occurred. People, automated assessment, or a combination of both may perform
+this review. CD4AI
+leaves that choice to the implementation; the judgment must have a basis in
+what the application was expected to do.
 
-\subsection{Recording Known Limitations and Maintaining Cases}
-\begin{itemize}
-  \item Describe how to record a known unresolved limitation without treating
-    the current behavior as the expected behavior.
-  \item Discuss how cases are selected and maintained as the suite grows,
-    including duplicate cases and changing requirements.
-  \item Explain how to keep expected behavior and known defect status up to
-    date so that later results can be interpreted.
-\end{itemize}
+Consider the hypothetical customer-support assistant introduced in the previous
+section. An automated evaluator flags as unsupported an answer stating that a
+customer is eligible for a refund. During curation, a reviewer checks the
+refund policy and purchase details available to the assistant. If the policy
+excludes that purchase and no exception applies, the answer reveals a defect.
+If the available information supports the answer, the evaluator's flag was a
+false alarm. If relevant purchase details are unavailable, the review may
+remain inconclusive.
 
-\subsection{Returning Cases to Evaluation}
-\begin{itemize}
-  \item Make the handoff explicit: recording a review does not by itself add a
-    case to the evaluation suite.
-  \item Describe manual and automated ways to retain the case, evaluate a fix,
-    and check subsequent changes.
-\end{itemize}
+An inconclusive judgment does not establish that the behavior was acceptable.
+The team may retain the interaction for further investigation without adding
+it to the evaluation suite yet.
+
+An interaction may also expose a situation the team had not anticipated.
+Existing requirements may already determine the expected behavior; otherwise,
+the team needs to clarify what the application should do before preparing an
+evaluation case. Review can therefore reveal gaps in expectations as well as
+failures to meet existing ones. Once the expected behavior is sufficiently
+clear, the team can decide whether to retain the interaction as a reusable case.
+
+\subsection{Preparing and Maintaining Evaluation Cases}
+
+For an interaction selected for inclusion, curation prepares a reusable case
+that specifies the input or scenario, relevant context, expected behavior,
+and assessment criteria. Expected behavior need not be a single exact output:
+for example, the assistant should explain that a purchase is ineligible for a
+refund, while several phrasings may satisfy that requirement. Assessment may
+use rule-based checks on structured outputs or an LLM acting as a judge that
+assesses a response against a rubric~\parencite{Grace:DemystifyingEvals:2026}.
+Section~\ref{sec:cd4ai-testing} discusses these methods and their limitations.
+
+The case should preserve the relevant conditions under which the failure was
+observed, including conversation history, retrieved information, or tool state
+where needed. Omitting relevant context may produce an evaluation that no longer
+exercises the observed problem. Preserving that context does not guarantee that
+an intermittent failure will occur on every run; repeated execution and
+reliability assessment belong to the evaluation stage.
+
+Cases derived from observed failures complement those prepared from the
+application's requirements and may be retained before the defects are fixed.
+When adding a case, the team considers whether it contributes meaningful
+coverage. Two interactions exposing the same defect may exercise different
+conditions and justify separate cases. Conversely, if the relevant scenario
+and expected behavior are already covered, an additional case may be redundant.
+The decision depends on what the case contributes, not only on whether the
+defect is already known.
+
+When requirements change, the team should review affected cases and update
+their expected behavior and assessment criteria where necessary. A change to
+a product policy, for example, may change the expected answer to a customer's
+request. Without these updates, evaluations may report failures even when the
+application correctly follows the new requirements. Keeping a connection to
+the original interaction or review can help explain why a case exists and
+support its maintenance.
+
+Prepared cases are made available to subsequent evaluations, for example
+through a dataset or executable tests. This completes the connection from a
+reviewed interaction to a reusable case. The next section discusses how cases
+are exercised and how their results are interpreted.
 
 \section{Evaluation: Assessing Changes and Supporting Delivery}
 \label{sec:cd4ai-testing}
 
-\subsection{Assessment Criteria and Variability}
-\begin{itemize}
-  \item Clarify how tests and evaluations are used in this chapter, drawing on
-    the terminology introduced in Section~\ref{sec:background-evaluation}.
-  \item Discuss possible checks and evaluators, including their limitations when
-    several outputs are acceptable or responses vary between runs.
-  \item Distinguish intermittent application failures from inconsistent grading
-    and execution errors. A failed run requires interpretation before it can
-    be attributed to an application defect or a regression.
-  \item Explain how repeated trials can help assess reliability, drawing on
-    \textcite{Grace:DemystifyingEvals:2026}. Specify trial counts and acceptance
-    criteria in advance rather than rerunning a case until it passes.
-  \item Explain how observed variability affects confidence in a proposed fix
-    and comparisons with a baseline. One successful run does not establish
-    that an intermittent defect has been resolved.
-  \item Connect the required level of reliability to the delivery policy.
-    Intermittent failure does not automatically make a result non-blocking;
-    deferring a confirmed defect requires an explicit decision about its risk.
-\end{itemize}
+% Evaluation is the step of the continuous delivery pipeline which verifies the
+% behavior of the application, and decides whether the proposed change can be
+% deployed or requires further work.
+% Approval of a proposed change requires that the evaluation results meet the
+% team's delivery policy.
+
+% I don't think we need to discuss like "how to create an eval" or "how an eval
+% works", since it is not really the responsability of the pattern. Yet, I
+% think it might be interesting to touch the fact that some evals might never
+% pass -- which then are known issues. The team is responsible for deciding
+% whether these known issues are blocking or not, and for keeping the expected
+% behavior. Different strategies can be used to handle this (I think it would
+% be interesting to put here one or other example).
+% Maybe we could cite one or two examples of evals, just to make it clear?
+% And then tell problems of the evals, but being quite fast on that. Yet, maybe
+% this should be explored in the background chapter, since it is not really the
+% responsability of the pattern.
 
 \subsection{Known Limitations and Regression Protection}
 \label{sec:cd4ai-result-interpretation}
+
+% When developing this discussion, explain how the record of an unresolved
+% limitation can be kept current without treating observed behavior as expected
+% behavior. Keep case selection and expectation maintenance in curation.
 
 A case documenting an unresolved defect can guide improvement; exercising it
 against a proposed fix supports confirmation; retaining it after the behavior
@@ -360,8 +389,15 @@ which mechanisms they provide for interpreting known limitations and potential
 regressions. These questions will be examined separately from the evidence for
 the three-stage feedback loop, without assuming a common division of cases.
 
+% Maybe pass to "discussion" session
 \subsection{Execution Cost and Frequency}
 \label{sec:cd4ai-evaluation-cost}
+
+% Evaluation can be really costly.
+% But tbh I don't think we should go into too much detail here, since it is not
+% really the responsability of the pattern. Maybe we should remove this one
+% part, or mention it breafly in the discussion chapter.
+
 \begin{itemize}
   \item Discuss the cost of application runs, model-based grading, repeated
     trials, and execution time as the suite grows. Distinguish the cost of
@@ -380,74 +416,4 @@ the three-stage feedback loop, without assuming a common division of cases.
     a case supplies no fresh evidence that its expected behavior is preserved.
     Explain the trade-off between lower execution cost and delayed discovery
     of deterioration.
-\end{itemize}
-
-\section{Forces and Design Trade-offs}
-\label{sec:cd4ai-forces}
-
-\noindent\emph{Working formulation: the following forces will be revisited
-as the case studies are developed.}
-
-Testability, robustness, and evolvability are desired qualities that can
-reinforce one another. Testability helps teams assess whether a proposed change
-preserves expected behavior before deployment. Robustness concerns the
-application's ability to maintain acceptable behavior under varying conditions,
-while evolvability concerns its ability to accommodate change. The evaluation
-suite must also evolve to remain useful as the application changes.
-
-These qualities need not oppose one another in every pairwise comparison.
-The forces considered here instead express tensions between desired outcomes
-and the constraints on achieving them. The pattern aims to address three
-such tensions:
-
-\begin{itemize}
-  \item \textbf{Confidence in changes and delivery speed:} teams need evidence
-    that changes preserve expected behavior, but running more extensive
-    evaluations requires execution time and maintenance effort. The validation
-    process must fit the time and resources available for frequent delivery.
-  \item \textbf{Failure discovery and review capacity:} teams need to discover
-    failures beyond those covered by existing tests, but collecting more
-    candidate interactions increases the curation workload. Broad discovery
-    must be balanced with the capacity to review candidates and prepare useful
-    evaluation cases.
-  \item \textbf{Behavior preservation and adaptation:} historical regression
-    cases help check established behavior, but changing requirements can make
-    some expectations outdated. Teams must distinguish unintended regressions
-    from intended changes and maintain the suite accordingly.
-\end{itemize}
-
-Evaluation, monitoring, and curation work together to address these tensions.
-Evaluation supplies evidence about proposed changes, monitoring supplies
-interactions for investigation, and curation determines which interactions
-should become evaluation cases and what behavior those cases should check.
-The cycle does not remove the costs or trade-offs; its implementation must
-establish how these responsibilities fit the team's delivery process.
-
-% Writing notes:
-% Keep the desired qualities distinct from the concrete tensions above.
-% Do not claim that greater testability necessarily lowers robustness or
-% evolvability. Better testing can support both.
-% Validate this working formulation against Chapter 5: look for evidence of
-% evaluation cost, candidate selection, review workload, and changes to expected
-% behavior. Do not present these as findings before examining the evidence.
-% Explain how the stages address the tensions without forcing a one-to-one
-% correspondence between a stage and a force. Connected paragraphs are enough;
-% pairwise-comparison subsections are not necessary.
-% Pattern-writing guidance discussed during review:
-% https://www.hillside.net/index.php/a-pattern-language-for-pattern-writing
-% Add a formal citation if this guidance is used in the final argument.
-
-\section{Consequences and Limitations}
-\label{sec:cd4ai-consequences}
-
-\begin{itemize}
-  \item Discuss the intended benefit of an evaluation suite informed by actual
-    use, separating expected benefits from measured outcomes.
-  \item Discuss the costs of observation, review, and maintaining and running
-    the growing suite.
-  \item Explain limits arising from unobserved interactions, missed signals,
-    reviewer errors, and variable behavior. Avoid guarantees of complete
-    coverage or prevention of every recurrence.
-  \item Introduce the case studies as an examination of how these responsibilities
-    and connections appear in different systems and workflows.
 \end{itemize}
