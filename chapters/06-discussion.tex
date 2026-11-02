@@ -58,6 +58,41 @@ establish how these responsibilities fit the team's delivery process.
 % https://www.hillside.net/index.php/a-pattern-language-for-pattern-writing
 % Add a formal citation if this guidance is used in the final argument.
 
+\subsection{Execution Cost and Coverage}
+
+Execution cost can constrain candidate selection during monitoring. A team may
+run an expensive automated assessment on a sample of interactions rather than
+on every interaction, trading coverage for lower execution
+cost~\parencite{Databricks:ProductionMonitoring}. This is an implementation
+trade-off: CD4AI does not prescribe a sampling rate or require automated
+assessment of every interaction.
+
+\subsection{Maintaining the Evaluation Suite}
+
+When requirements change, the team should review affected cases and update
+their expected behavior and assessment criteria where necessary. A change to
+a product policy, for example, may change the expected answer to a customer's
+request. Without these updates, evaluations may report failures even when the
+application correctly follows the new requirements. Keeping a connection to
+the original interaction or review can help explain why a case exists and
+support its maintenance.
+
+\subsection{Dependence on External Model Services}
+
+In the author's professional experience, model updates and service instability
+have disrupted evaluations. This observation provides practical motivation
+for examining the difficulty of maintaining comparable evaluation conditions;
+it is not a measured outcome of the case studies.
+
+A change to a model used by the application may alter its behavior independently
+of a proposed code or prompt change. A change to a model used as an evaluator
+may instead alter the assessment of that behavior. Service errors or timeouts
+may prevent an assessment from completing at all. Interpreting results therefore
+requires distinguishing behavioral changes, changes in assessment, and missing
+evaluation evidence. An interrupted evaluation does not establish that the
+application meets its criteria; the delivery policy must determine how to
+proceed when the required evidence is unavailable.
+
 
 % I think "consequences and limitations" should be in discussion part
 \section{Consequences and Limitations}
