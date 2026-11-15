@@ -75,18 +75,23 @@ Figure~\ref{fig:divination-review-screen} illustrates this review step.
 When the team decides to create an evaluation case for a confirmed defect,
 a developer specifies the expected behavior and adds the case to the dataset
 stored in the source repository.
-Each record contains an opening question, a scenario, and an expected outcome.
-It can support both a single-answer check and a simulated
-conversation~\parencite{Divination:Evaluations}. Recording a review does not
+Each record contains an opening question, a scenario, and an expected
+outcome~\parencite{Divination:Evaluations}. Recording a review does not
 automatically add this dataset entry.
 
 \paragraph{Evaluation.}
-Both suites exercise the application's retrieval and answer-generation flow.
-The single-turn suite submits each record's opening question and assesses the
-answer using criteria such as grounding in retrieved passages and correctness
-against the expected outcome. The conversational suite uses the scenario and
-expected outcome to generate follow-up messages and assess the resulting
-conversation~\parencite{Divination:Evaluations}.
+Divination includes single-turn and conversational evaluations. Both exercise
+the application's retrieval and answer-generation flow. The single-turn
+evaluation submits the case's opening question and assesses the answer using
+the selected criteria. In Divination, these include checking whether the
+answer's claims are supported by the retrieved passages and agree with the
+expected outcome.
+
+The conversational evaluation simulates a user interacting with the application
+over several turns. The simulated user generates follow-up messages based on
+the scenario and the conversation so far. The resulting conversation is then
+assessed using criteria such as whether the assistant's claims are supported
+by the retrieved passages~\parencite{Divination:Evaluations}.
 
 \subsection{Result Interpretation and Delivery Decisions}
 
@@ -98,24 +103,42 @@ the problem, then retain the case for later changes. One passing run may not
 establish that an intermittent defect has been fixed, as discussed in
 Section~\ref{sec:cd4ai-result-interpretation}.
 
-Single-turn evaluations run on pull requests using DeepEval, an evaluation
-framework, to assert that the applicable metrics pass. If the evaluation
-command fails, the CI job fails~\parencite{Divination:CI}.
+The CI pipeline runs the single-turn evaluations automatically on pull requests
+using DeepEval, the evaluation framework examined alongside Confident AI in
+Section~\ref{sec:case-deepeval}. If an evaluation fails its required checks,
+the CI job is marked as failed~\parencite{Divination:CI}.
 
-\subsection{Limitations}
+\subsection{Limitations and Possible Improvements}
 
-The return from review to evaluation depends on a developer preparing the case.
-The documented procedure adds cases together with fixes; it does not explain
-how unresolved cases enter the active suite or how their continuing failures
-are distinguished from newly worsened behavior. The reviewed evidence does not
-follow one defect through this manual handoff to a confirmed fix and delivery
-decision.
+The pipeline connects reviewed defects to evaluations that run in CI. Further
+improvements could make it clearer which problems those evaluations cover and
+what their results mean for delivery.
 
-The evaluation commands also include options to ignore errors and skip
-assessments with missing parameters. A successful command therefore does not
-guarantee that every metric was evaluated~\parencite{Divination:CI}. These
-options handle incomplete or errored assessments; they do not define which
-known behavioral failures may be accepted for delivery.
+The current procedure adds an evaluation case together with the fix for
+the defect it captures. It could be extended to include cases whose defects
+have not yet been fixed. Recording which problems are already known and
+comparing results with a reference application version would help distinguish
+continuing failures from new or worsened behavior. The team could then define
+which known failures can be tolerated for delivery and which results should
+block a proposed change.
+
+Interpreting these results also requires knowing whether the assessments
+completed. The evaluation setup allows the run to continue when an assessment
+encounters
+an execution error or lacks required information. For example, an LLM judge
+may return an answer that the evaluator cannot parse. A successful CI job
+therefore does not guarantee that every assessment was completed. The CI
+summary could make this explicit by separating completed assessments that
+passed or failed from those that were skipped or encountered errors. These
+options do not implement a policy for tolerating known defects: they handle
+assessments that could not be completed, rather than answers assessed as
+incorrect.
+
+The coverage of these evaluations also depends on turning selected reviewed
+defects into cases that the pipeline can evaluate. This step currently
+requires manual work.
+Linking the review record to the resulting case would make it easier
+to see which reviewed defects have corresponding evaluation cases.
 
 \section{DeepEval and Confident AI}
 \label{sec:case-deepeval}
@@ -126,9 +149,10 @@ DeepEval is an open-source framework for evaluating LLM applications. Confident
 AI, the company that maintains it, also offers a platform for monitoring,
 evaluation reports, and collaborative dataset
 management~\parencite{ConfidentAI:DocsIndex}. In the workflow examined here,
-DeepEval runs evaluations, while monitoring and review take place on Confident
-AI. The evidence consists of their guides on evaluation, monitoring, annotation
-queues, and dataset management.
+DeepEval runs evaluations, while Confident AI supports monitoring, review,
+and comparison of evaluation results. The evidence consists of their guides on
+evaluation, monitoring, annotation queues, dataset management, and
+Experiments~\parencite{ConfidentAI:Experiments}.
 
 \subsection{The Feedback Loop}
 
@@ -147,30 +171,32 @@ the capabilities supporting this return path.
 
 \paragraph{Monitoring.}
 Confident AI helps the team find interactions worth reviewing. It records
-application executions as traces and conversations as threads. Automated
-assessments, called metrics, and classifiers help identify possible problems.
-During trace evaluation, only metrics that do not require reference data, such
-as an expected answer, run~\parencite{DeepEval:MultiTurn,ConfidentAI:OnlineEvals}.
+application executions and conversations so that they can be inspected and
+assessed. Automated checks, called metrics, score aspects of application
+behavior, while classifiers assign labels to
+interactions~\parencite{DeepEval:MultiTurn,ConfidentAI:OnlineEvals,
+ConfidentAI:Classifiers}.
 
 For example, classifiers can label interactions as expressing negative
 sentiment. Signals highlights increases in such labels, and Failure Modes
-groups flagged traces into recurring problems with supporting
-evidence~\parencite{ConfidentAI:Classifiers,ConfidentAI:Signals,
+groups flagged interactions into recurring problems and provides examples
+for review~\parencite{ConfidentAI:Classifiers,ConfidentAI:Signals,
 ConfidentAI:FailureModes}. User ratings and comments provide another source of
 candidates~\parencite{ConfidentAI:AnnotationQueues}.
 
-The Drift view compares production behavior across application versions. It
-reports sustained deterioration relative to a selected baseline version, using
-minimum sample requirements and statistical or relative-change criteria,
-depending on the metric~\parencite{ConfidentAI:Drift}. These findings help
-direct investigation after deployment.
+The Drift view compares production results across application versions and
+flags sustained deterioration relative to a selected reference
+version~\parencite{ConfidentAI:Drift}. These findings help the team identify
+changes worth investigating after deployment.
 
 \paragraph{Curation.}
 Annotation queues organize selected interactions for human review. Reviewers
 can record a rating, an explanation, and an expected answer or conversational
-outcome~\parencite{ConfidentAI:AnnotationQueues}. Workflows can route matching
-interactions to these queues or add them directly to datasets for review in
-the dataset editor~\parencite{ConfidentAI:Workflows,ConfidentAI:Datasets}.
+outcome~\parencite{ConfidentAI:AnnotationQueues}. Confident AI's Workflows
+automate the selection and routing of interactions. The team defines conditions
+that trigger an action, such as sending an interaction to a review queue or
+adding it to a dataset for review in the dataset
+editor~\parencite{ConfidentAI:Workflows,ConfidentAI:Datasets}.
 
 DeepEval calls the retained records \emph{goldens}. A single-turn golden stores
 an input and may include a reference answer or context. A conversational golden
@@ -179,47 +205,125 @@ message~\parencite{ConfidentAI:Datasets,DeepEval:MultiTurn}. For example, a
 golden could describe a customer requesting a refund after 45 days, with the
 expected outcome that the assistant explains the 30-day refund limit.
 
-Together, these records form the evaluation dataset. Team members can review
-and finalize goldens in the editor, approving the data for use in
-evaluations~\parencite{ConfidentAI:Datasets}. Finalization concerns the case's
-readiness for evaluation, not whether the application already passes it.
+Together, these records form the evaluation dataset. Team members review the
+prepared cases in the dataset editor and mark them as ready for evaluation,
+a step called \emph{finalization}~\parencite{ConfidentAI:Datasets}. A finalized
+case may still expose an unresolved defect in the application.
 
 \paragraph{Evaluation.}
-The team loads a dataset and chooses the metrics, which implement the scoring
-procedures used to assess behavior. Single-turn evaluation runs the application
-on each retained input~\parencite{DeepEval:AgentGuide}. For conversational
-evaluation, a simulator generates user messages from each golden's scenario
-and interacts with the application. Multi-turn metrics assess the resulting
-conversation~\parencite{DeepEval:MultiTurn}. Later application versions can
-therefore be tested on the retained inputs or scenarios.
+DeepEval evaluates an application version using cases retained in a dataset.
+For single-turn evaluations, the application answers each stored input. For
+conversational evaluations, a simulated user interacts with the application
+according to a retained scenario. Metrics define how the resulting answers
+or conversations are assessed. Depending on the metric, this assessment may
+use code or an LLM acting as a judge. Some metrics use the case's expected
+answer or outcome as a reference~\parencite{DeepEval:AgentGuide,DeepEval:MultiTurn}.
+
+The team selects metrics for the cases being evaluated. A common setup applies
+the same set of metrics to every case in a run, with each assessment using the
+information provided by that case. Cases requiring different checks can
+instead be evaluated with different metric
+selections~\parencite{DeepEval:AgentGuide,DeepEval:CI}.
+
+For example, the team could apply the same correctness metric to two refund
+cases. This metric uses an LLM judge to compare each actual answer with its
+corresponding expected answer, without requiring identical wording. For a
+purchase made 45 days ago, the expectation is to explain that the 30-day refund
+window has expired; for a purchase made 10 days ago, it is to explain that the
+purchase qualifies. The assessment logic remains the same, while the expected
+answer varies by case.
+
+Different metrics assess different aspects of behavior.
+A metric configured to assess politeness, for example, could give a high score
+to a courteous answer that makes the wrong refund decision. Recording the
+expected answer therefore does not ensure that every selected metric checks
+it. The team needs to choose assessments that cover the behavior the case is
+intended to verify. The resulting outputs and assessment results are collected
+in a \emph{test run}~\parencite{DeepEval:AgentGuide,DeepEval:MultiTurn}.
+
+The following subsection explains how these results support comparisons
+between versions and acceptance checks in CI.
 
 \subsection{Result Interpretation and Delivery Decisions}
 
-The development guides use datasets to compare application iterations on the
-same inputs or scenarios~\parencite{DeepEval:AgentGuide,DeepEval:MultiTurn}.
-This helps the team assess whether a proposed change improves behavior on
-those cases.
+Confident AI's \emph{Experiments} compare application versions using the same
+dataset and metrics. In the documented workflow for existing single-turn
+results, a user selects test runs in the interface and creates an Experiment.
+The platform displays the selected test runs side by side, including average
+scores, differences relative to a selected base run, and the outputs and scores
+for individual cases~\parencite{ConfidentAI:Experiments}. The selected runs
+may include results previously produced in CI.
 
-For CI, the team chooses passing thresholds for the metrics: the boundaries
-that determine whether their scores are acceptable. The agent guide uses
-\texttt{assert\_test} to check the selected metrics, with a failed metric
-causing the test and CI build to fail~\parencite{DeepEval:AgentGuide}. Only
-cases included in these checks affect their outcome; storing a golden in a
-dataset does not by itself make it a mandatory check.
+In CD4AI, this comparison can help distinguish continuing limitations from
+potential regressions. For example, a retained case might score poorly in both
+versions, while another case's score drops after a change. The first result
+suggests a continuing limitation; the second suggests deterioration to
+investigate.
+
+Comparing versions helps the team investigate changes, but delivery also
+requires deciding whether the results are acceptable. DeepEval can run
+selected evaluations automatically in CI. Teams can use metric thresholds to
+define acceptance checks or implement their own rules---for example,
+comparing results with a chosen reference run and rejecting score decreases
+beyond an accepted tolerance.
+
+With threshold-based checks, each required metric must meet its acceptance
+threshold for the evaluated case. If a required check fails, the test fails
+and CI marks the job as failed. Passing results on other cases do not cancel that
+failure~\parencite{DeepEval:CI}.
+
+DeepEval also allows cases or metrics to be marked as \emph{flaky}, so their
+failures remain visible without failing the CI
+test~\parencite{DeepEval:CI}. This mechanism is documented for intermittent
+failures; its possible use for known unresolved defects is discussed below.
+
+Confident AI supports designating an \emph{official reference run}, a saved evaluation
+run used as a reference for subsequent comparisons~\parencite{DeepEval:CI}.
+This designation alone does not make CI reject deterioration relative to that
+run; enforcing such a comparison requires a rule implemented by the team.
 
 \subsection{Limitations}
 
-Under the illustrated CI rule, an included case that continues to fail also
-fails the build. The reviewed guides do not specify a policy for accepting
-known failures while rejecting new deterioration, or how production drift
-findings would affect that policy.
+DeepEval and Confident AI provide mechanisms for retaining evaluation cases,
+comparing application versions, and enforcing acceptance checks in CI. Putting
+these mechanisms together, however, leaves an important decision to the team:
+how to allow known unresolved problems while detecting unacceptable
+deterioration.
 
-The comparisons also require care. Production versions may handle different
-interactions, and the Drift documentation warns about comparisons between
-versions active during different periods~\parencite{ConfidentAI:Drift}.
-In development, reusing conversational goldens holds the scenarios constant,
-but simulated messages and application responses may still vary. These
-differences need to be considered when interpreting a change in results.
+Threshold-based checks assess results against acceptance criteria. On their
+own, they do not identify deterioration relative to an earlier version.
+Suppose a metric requires a score of at least 0.70. A
+decrease from 0.95 to 0.75 would still pass, even though the measured behavior
+has worsened. Conversely, a case scoring 0.60 in both versions would fail
+without indicating a new regression. A failed CI check therefore does not, by
+itself, distinguish a continuing limitation from a regression.
+
+Experiments help address this distinction by displaying differences between
+application versions. In the documented workflow, however, a user initiates
+the comparison through the interface and interprets its
+results~\parencite{ConfidentAI:Experiments}. Relying on this review for each
+proposed change may become burdensome as the number of changes and evaluation
+cases grows.
+
+Even when a problem is identified, the team may need to deliver a version
+before resolving it. The \texttt{flaky} flag offers a possible way to keep an
+unresolved case under evaluation without blocking CI~\parencite{DeepEval:CI}.
+However, allowing its failures also means that the check alone will not block
+further deterioration. For example, a case that previously failed occasionally
+could begin failing consistently while remaining non-blocking. Using this
+mechanism for known issues therefore requires a separate policy for reviewing
+their results and deciding when they are no longer acceptable.
+
+Deciding whether such behavior has worsened becomes harder when failures are
+intermittent. Even under unchanged
+conditions, repeated evaluations may produce different outcomes. A failure in
+the proposed version may therefore reflect variation rather than a regression.
+Repeated evaluations can help establish whether the behavior has become less
+reliable---for example, whether a case that previously failed in roughly one
+out of ten executions now fails in six out of ten. The team must still decide
+how much evidence is needed to treat that difference as meaningful. Marking
+the case as flaky prevents it from blocking CI, but does not resolve this
+uncertainty.
 
 \section{Braintrust}
 \label{sec:case-braintrust}
@@ -233,10 +337,19 @@ loop~\parencite{Braintrust:Workflow}. The evidence consists of the documentation
 for that workflow and for monitoring, human review, datasets, experiment
 comparison, and CI.
 
+Two terms describe how Braintrust organizes evaluations. A \emph{scorer}
+assesses an application output and returns a score between 0 and
+1~\parencite{Braintrust:Scorers}. It plays a role similar to a DeepEval metric
+(Section~\ref{sec:case-deepeval}): the same scoring logic can assess different
+cases, using each case's expected output as a reference when needed. An
+\emph{experiment} records the outputs and scores of one evaluation run, similar
+to a DeepEval test run, and can be compared with other
+experiments~\parencite{Braintrust:DatasetUse,Braintrust:Comparison}.
+
 \subsection{The Feedback Loop}
 
-Figure~\ref{fig:case-braintrust} maps Braintrust's documented features to the
-three stages.
+Figure~\ref{fig:case-braintrust} maps Braintrust's documented features to
+CD4AI's three stages.
 
 \begin{figure}[H]
   \centering
@@ -247,26 +360,48 @@ three stages.
 \end{figure}
 
 \paragraph{Monitoring.}
-Logs record application interactions as traces. Dashboards show trends in
-scores and other metrics, helping reviewers narrow down concerning
-changes~\parencite{Braintrust:Dashboards}. Patterns, a feature in public
-preview, lets Braintrust's AI agent investigate traces and report recurring
-problems, including behavior that existing scorers do not measure. Each
-finding includes supporting traces~\parencite{Braintrust:Patterns}. User
-ratings, comments, and corrections provide another source of candidates for
-review~\parencite{Braintrust:UserFeedback}.
+Logs retain application interactions as traces that can later be reviewed.
+Recording those interactions makes review possible, but the team still needs
+to identify which ones deserve attention. Dashboards help by showing trends
+in scores, latency, and costs~\parencite{Braintrust:Dashboards}. A concerning
+trend can prompt reviewers to investigate individual interactions and assess
+what went wrong.
+
+Patterns provides another way to identify candidates for review. Braintrust's
+AI agent investigates traces and reports recurring problems, with supporting
+traces for each finding~\parencite{Braintrust:Patterns}. This can draw
+attention to problems that the configured scorers do not capture: the scores
+reflect the criteria being assessed, which may not cover every kind of
+undesired behavior. Reviewers can inspect the supporting interactions to
+determine whether a reported pattern represents a problem that warrants
+further action.
+
+Candidates can also come directly from end users. The application can attach
+their feedback to the corresponding trace as ratings, comments, or
+corrections. A correction states what the user thinks the output should have
+been~\parencite{Braintrust:UserFeedback}. This feedback can point to
+interactions worth reviewing even when automated checks have not flagged them,
+but it does not by itself establish a defect. A negative rating indicates
+dissatisfaction, and a correction may itself be mistaken. For example, a
+customer could reply that the assistant should have approved a refund, even
+though the purchase falls outside the refund window. Assessing the
+interaction and the user's feedback belongs to the subsequent curation stage.
 
 \paragraph{Curation.}
-Reviewers assess selected traces and record expected behavior, such as a
-correct category or a free-text correction, in the trace's expected
-field~\parencite{Braintrust:HumanReview}. Selected traces can then be added
-to a dataset from the logs or review views~\parencite{Braintrust:Datasets}.
-A user correction can suggest an expected value for review. Once confirmed,
-that expectation can guide a scorer that checks an exact value or broader
-criteria.
+Reviewers assess selected traces and record what the application should have
+produced in the trace's expected field. They can choose from predefined
+options, such as the correct label for a classification task, or write the
+expected output as free text~\parencite{Braintrust:HumanReview}. The recorded
+expectation can then serve as the reference a scorer uses to assess later
+outputs~\parencite{Braintrust:DatasetUse}. Corrections from end users are also
+recorded as expected values~\parencite{Braintrust:UserFeedback}. Because a
+correction may be mistaken, CD4AI treats it as a candidate: a reviewer checks
+it before it serves as a reference.
 
-In Braintrust, a dataset is a versioned collection of evaluation cases. Each
-record contains an input and may include an expected output, metadata, and
+Selected traces can then be added to a dataset from the logs or review
+views~\parencite{Braintrust:Datasets}. In Braintrust, a dataset is a versioned
+collection of evaluation cases. Each record contains an input and may include
+an expected output, metadata, and
 tags~\parencite{Braintrust:DatasetOverview}. For the refund example, a record
 could contain the customer's question and the expected response under the
 refund policy. The dataset stores the cases; running the application and
@@ -328,11 +463,22 @@ one automatically~\parencite{Braintrust:Comparison}. Because datasets can
 evolve, the name alone does not ensure that the cases are identical: comparisons
 need a common set of cases and compatible assessment criteria.
 
-In CI, an action runs evaluations on pull requests and posts a comparison
-summary~\parencite{Braintrust:Comparison}. By default, evaluation exceptions
-fail the command; lower scores alone do not. To make quality results affect
-the outcome, the team defines a custom reporter that decides whether the run
-passes~\parencite{Braintrust:CI}.
+Showing a score decrease in the comparison view does not automatically make
+it block delivery. In CI, an action runs evaluations on pull requests and
+posts a comparison summary~\parencite{Braintrust:Comparison}. By default, an
+exception raised during evaluation makes the evaluation command fail. This
+indicates an execution error; an evaluation that completes but produces lower
+scores does not fail the command for that reason alone~\parencite{Braintrust:CI}.
+
+This also differs from DeepEval, where a metric's threshold determines whether
+a test passes and a failed test fails the CI job. A Braintrust scorer can be
+given an optional pass threshold, which marks its scores as passing or failing
+in the experiment view~\parencite{Braintrust:Autoevals}. The reviewed
+documentation does not describe this threshold as affecting the CI outcome.
+
+To make these scores affect the CI outcome, the team defines a \emph{custom
+reporter}: code that processes evaluation results and decides whether they
+should make the CI job fail~\parencite{Braintrust:CI}.
 
 The comparison summary is also available to code~\parencite{Braintrust:Comparison}.
 A reporter could therefore implement a rule that tolerates continuing failures
@@ -342,15 +488,33 @@ specify such a policy for handling known limitations.
 
 \subsection{Limitations}
 
-The comparison guide does not describe a statistical test that distinguishes
-score decreases from run-to-run variation, although trials make that variation
-visible~\parencite{Braintrust:Comparison}. A reported decrease therefore needs
-investigation before it is attributed to an application change.
+Braintrust makes differences between experiments visible and allows teams to
+use them in CI decisions. Using these comparisons for regression protection
+still requires choosing an appropriate reference, interpreting the observed
+differences, and deciding which differences should block delivery.
 
-The reference also needs to be chosen deliberately. With Git metadata and no
+The reference needs to represent behavior that the team intends to preserve.
+With Git metadata and no
 explicit baseline, Braintrust selects the most recent experiment on the same
 branch~\parencite{Braintrust:Comparison}. That experiment may itself have been
 a failed attempt, rather than a version whose behavior the team accepted.
+The team therefore needs to check whether the selected baseline is appropriate
+for the delivery decision.
+
+Even with an appropriate reference, a score decrease may reflect variation
+between executions. The comparison guide does not describe a statistical test
+that distinguishes score decreases from run-to-run variation, although trials
+make that variation visible~\parencite{Braintrust:Comparison}. A reported
+decrease therefore needs investigation before it is attributed to an
+application change.
+
+Once the team has interpreted a difference, it must decide how that result
+affects delivery. The custom reporter provides a place to enforce this policy,
+but does not define it. For example, the team may tolerate a continuing known
+failure while rejecting further deterioration on the same case. The reviewed
+workflow leaves this distinction to the team, so displaying a comparison alone
+does not establish how known limitations and potential regressions will be
+handled in CI.
 
 \section{MLflow}
 \label{sec:case-mlflow}
@@ -432,16 +596,23 @@ its criteria.
 
 \subsection{Limitations}
 
+MLflow's guides connect observed failures to tests that can enforce acceptance
+criteria. The remaining question is how to interpret a failed check: does it
+expose a problem that remains unresolved, or behavior that has deteriorated?
+
 The illustrated assertion does not distinguish a continuing failure from one
 introduced by a change. An included case that fails its criteria fails the
 check in either situation. The reviewed sources do not specify how known
 limitations would remain visible while some failures are permitted and others
 block delivery.
 
-The guides describe creating tests from observed failures and assessing fixes.
-Calling these checks regression tests expresses their intended protective use;
-it does not establish that the application previously passed them. That
-interpretation requires evidence of earlier behavior, as discussed in
+Making this distinction requires evidence of earlier behavior. The guides
+describe creating tests from observed failures and assessing fixes. A case
+created while a defect remains unresolved may continue to fail until the fix
+is effective. Calling such checks regression tests expresses their intended
+protective use; it does not establish that the application previously passed
+them. Interpreting a later failure as a regression therefore requires a
+reference showing the behavior that had been established, as discussed in
 Section~\ref{sec:cd4ai-result-interpretation}.
 
 % Cross-case synthesis and implications for pattern refinement belong in
