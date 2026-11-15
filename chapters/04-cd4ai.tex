@@ -262,7 +262,9 @@ Figure~\ref{fig:cd4ai-result-interpretation} shows, comparing a case's results o
 the current version with those on the proposed version can help distinguish
 these situations. When evidence about previous behavior is unavailable,
 the team may identify a defect without yet determining whether it is a
-regression.
+regression. Distinguishing continuing limitations from potential regressions
+can help teams identify new failures despite existing ones and keep unresolved
+limitations visible.
 
 \begin{figure}[htbp]
   \centering
@@ -272,10 +274,6 @@ regression.
     each version's runs, for example as pass rates.}
   \label{fig:cd4ai-result-interpretation}
 \end{figure}
-
-Distinguishing continuing limitations from potential regressions can help teams
-identify new failures despite existing ones and keep unresolved limitations
-visible.
 
 To isolate the effects of an application change, comparisons should use the
 same cases and assessment criteria, with other execution conditions held

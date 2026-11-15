@@ -2,248 +2,447 @@
 \chapter{Case Studies}
 \label{chap:case-studies}
 
-This chapter examines how CD4AI's responsibilities appear in Divination and in
+This chapter examines how CD4AI's stages appear in Divination and in
 the documented workflows of DeepEval with Confident AI, Braintrust, and MLflow.
-The analysis considers how observations become reusable cases, how those cases
-are evaluated, and how the results support decisions. The evidence varies:
-Divination provides an inspectable implementation, while the other cases provide
-documented workflows and supporting capabilities.
+The evidence varies: Divination provides an inspectable implementation, while
+the other cases provide documented workflows and supporting capabilities.
+Chapter~\ref{chap:methodology} describes how the cases were selected and
+analyzed.
 
-\section{How to Read the Cases}
-\label{sec:cases-overview}
-
-Each case identifies its context and evidence, follows the connections between
-monitoring, curation, and evaluation, and examines result interpretation and
-delivery policy. This mapping uses the responsibilities defined in
-Chapter~\ref{chap:cd4ai}; it does not imply that the external projects adopted
-the CD4AI name.
-
-The documentary evidence includes source snapshots captured on September 21,
-2026. Braintrust's comparison and CI documentation was additionally captured on
-October 31, 2026. These snapshots preserve the reviewed material independently
-of later changes to online documentation. Divination is examined at commit
-\texttt{44e6194}. The case repository records source locations, capture limits,
-and the provenance of its illustrations.
-
-Documentation can establish a recommended workflow or an available mechanism.
-Source inspection can establish how a mechanism is implemented. Neither alone
-establishes that a team completed the cycle or achieved a quality improvement.
-The external platforms were not operated for this study. Divination's synthetic
-interface examples also do not constitute an observed deployment experiment.
-
-\subsection{Evaluation Results and Delivery Decisions}
-\label{sec:cases-evaluation-purpose}
-
-Evidence for the feedback loop is considered separately from evidence for
-interpreting results and applying a delivery policy. In particular, the analysis
-asks what supports a distinction between continuing limitations and deterioration
-in established behavior, and how that distinction affects development or
-delivery. It does not assume that cases occupy fixed required and optional groups.
-
-A documented assertion or failed CI job establishes a mechanism for rejecting
-an evaluation result. Whether that result prevents integration or deployment
-also depends on the surrounding policy and its enforcement. Similarly, support
-for comparison or metadata does not establish how a team manages known issues.
-When the reviewed sources leave these matters unspecified, the case identifies
-an evidence gap rather than inferring that the behavior is present or absent.
+Each case presents its context and evidence, explains how observations move
+through monitoring, curation, and evaluation, and examines how results inform
+delivery decisions. Case-specific limitations identify what the available
+evidence leaves unresolved.
 
 \section{Divination}
 \label{sec:case-divination}
 
 \subsection{Context and Evidence}
 
-Divination is a conversational assistant that uses retrieval-augmented generation
-to answer questions about Dungeons \& Dragons. The inspected revision includes
-evaluation suites, interaction storage, candidate signals, and human review.
-The evidence consists of versioned source and project documentation, including
-the monitoring, evaluation, and CI guides~\parencite{Divination:Monitoring,
-Divination:Evaluations,Divination:CI}. The existing interface illustrations use
-synthetic data and an English interface adaptation; they illustrate the tools
-without demonstrating an executed evaluation cycle.
+Divination is a conversational assistant that retrieves passages from a document
+corpus to answer questions about Dungeons \& Dragons. This case examines the
+evaluation pipeline and testing infrastructure added to Divination.
 
-\subsection{Monitoring, Curation, and Evaluation}
+The inspected revision includes evaluation suites, interaction storage,
+candidate signals, and human
+review. The evidence consists of versioned source and project documentation,
+including the monitoring, evaluation, and CI guides~\parencite{Divination:Monitoring,
+Divination:Evaluations,Divination:CI}.
 
-Monitoring retains questions, answers, and retrieved passages. Detectors flag
-potential problems, and negative user feedback also generates a signal. Human
-review can examine interactions with and without signals, recording verdicts
-and rationales. This separates candidate selection from the judgment that a
-problem occurred~\parencite{Divination:Monitoring}.
+\subsection{The Feedback Loop}
 
-The connection from review to evaluation is manual. The evaluation guide
-instructs a developer to inspect a confirmed defect, determine expected behavior,
-and add a case to the versioned dataset. The case specifies an opening question,
-a scenario, and an expected outcome. Single-turn and simulated conversational
-evaluations consume this dataset. A review record alone therefore does not add
-an executable case to the suite~\parencite{Divination:Evaluations}.
+Divination connects stored interactions and human review to a dataset used by
+its evaluation suites. A developer manually turns a confirmed defect into a
+reusable case~\parencite{Divination:Monitoring,Divination:Evaluations}.
+Figure~\ref{fig:case-divination} shows this connection.
+
+\begin{figure}[H]
+  \centering
+  \input{figures/case-divination}
+  \caption{Divination's feedback loop. The dashed box marks the manual step
+    from a reviewed defect to a dataset case.}
+  \label{fig:case-divination}
+\end{figure}
+
+\paragraph{Monitoring.}
+The application stores questions, answers, and retrieved passages, together
+with information about the model, prompt, and document corpus used. Detectors
+flag possible problems, such as a numeric claim absent from the retrieved text.
+Negative user feedback also generates a signal~\parencite{Divination:Monitoring}.
+These signals identify interactions for review; they do not establish defects.
+
+\paragraph{Curation.}
+The review panel samples interactions both with and without signals. Reviewers
+inspect the answer and retrieved passages, then record a verdict and rationale.
+Signals are initially hidden to reduce their influence on the judgment.
+Reviewing unflagged interactions also helps reveal failures that the detectors
+missed~\parencite{Divination:Monitoring}.
+Figure~\ref{fig:divination-review-screen} illustrates this review step.
+
+\begin{figure}[!htbp]
+  \centering
+  % Crop navigation and surrounding space; retain the complete review form.
+  \includegraphics[trim={344bp 158bp 96bp 282bp},clip,width=\linewidth]
+    {divination-review-source.png}
+  \caption[Divination's interaction review panel]{Divination's review panel
+    with synthetic demonstration data and English interface labels. The answer
+    claims \texttt{10d6} damage, while the retrieved reference states
+    \texttt{8d6}. The reviewer can record a rationale and confirm the defect.
+    Source: local capture of the application, cropped.}
+  \label{fig:divination-review-screen}
+\end{figure}
+
+When the team decides to create an evaluation case for a confirmed defect,
+a developer specifies the expected behavior and adds the case to the dataset
+stored in the source repository.
+Each record contains an opening question, a scenario, and an expected outcome.
+It can support both a single-answer check and a simulated
+conversation~\parencite{Divination:Evaluations}. Recording a review does not
+automatically add this dataset entry.
+
+\paragraph{Evaluation.}
+Both suites exercise the application's retrieval and answer-generation flow.
+The single-turn suite submits each record's opening question and assesses the
+answer using criteria such as grounding in retrieved passages and correctness
+against the expected outcome. The conversational suite uses the scenario and
+expected outcome to generate follow-up messages and assess the resulting
+conversation~\parencite{Divination:Evaluations}.
 
 \subsection{Result Interpretation and Delivery Decisions}
 
-The documented procedure exercises a new case before and after a fix and then
-commits the case with the fix. It describes a path from confirmation to later
-regression protection. It leaves unspecified how unresolved failing cases enter
-the active suite and how their failures are distinguished from newly introduced
-problems~\parencite{Divination:Evaluations}.
+The case-creation guide instructs the developer to check that a new case
+exposes the defect, run it again with the proposed fix, and commit the case
+with the fix~\parencite{Divination:Evaluations}. The intended sequence is
+confirmation followed by regression protection: check that the change addresses
+the problem, then retain the case for later changes. One passing run may not
+establish that an intermittent defect has been fixed, as discussed in
+Section~\ref{sec:cd4ai-result-interpretation}.
 
-Single-turn evaluations run in the pull-request workflow, and the CI runner
-propagates subprocess failures. However, the evaluation commands permit errors
-to be ignored and assessments with missing parameters to be skipped. The CI guide
-explicitly states that successful execution does not guarantee that every metric
-was evaluated~\parencite{Divination:CI}. Repository enforcement and an actual
-deployment gate were not verified in this analysis.
+Single-turn evaluations run on pull requests using DeepEval, an evaluation
+framework, to assert that the applicable metrics pass. If the evaluation
+command fails, the CI job fails~\parencite{Divination:CI}.
 
-\subsection{Connections and Limitations}
+\subsection{Limitations}
 
-Divination supplies inspectable implementations of the stages and instructions
-for the manual dataset handoff. The reviewed evidence does not follow one
-application failure through curation, a confirmed fix, and a later delivery
-decision. Demonstrating that sequence would strengthen the case. An explicit
-policy for unresolved cases and incomplete assessments would also make the
-relationship between evaluation results and acceptance clearer.
+The return from review to evaluation depends on a developer preparing the case.
+The documented procedure adds cases together with fixes; it does not explain
+how unresolved cases enter the active suite or how their continuing failures
+are distinguished from newly worsened behavior. The reviewed evidence does not
+follow one defect through this manual handoff to a confirmed fix and delivery
+decision.
+
+The evaluation commands also include options to ignore errors and skip
+assessments with missing parameters. A successful command therefore does not
+guarantee that every metric was evaluated~\parencite{Divination:CI}. These
+options handle incomplete or errored assessments; they do not define which
+known behavioral failures may be accepted for delivery.
 
 \section{DeepEval and Confident AI}
 \label{sec:case-deepeval}
 
 \subsection{Context and Evidence}
 
-This case examines the combined workflow of the DeepEval evaluation framework
-and the Confident AI platform. Its evidence consists of archived guides covering
-agent evaluation, conversational evaluation, annotation queues, and dataset
-management~\parencite{DeepEval:AgentGuide,DeepEval:MultiTurn,
-ConfidentAI:AnnotationQueues,ConfidentAI:Datasets}. The analysis concerns the
-workflow those sources describe; no application or platform account was used
-to execute it during this review.
+DeepEval is an open-source framework for evaluating LLM applications. Confident
+AI, the company that maintains it, also offers a platform for monitoring,
+evaluation reports, and collaborative dataset
+management~\parencite{ConfidentAI:DocsIndex}. In the workflow examined here,
+DeepEval runs evaluations, while monitoring and review take place on Confident
+AI. The evidence consists of their guides on evaluation, monitoring, annotation
+queues, and dataset management.
 
-\subsection{Monitoring, Curation, and Evaluation}
+\subsection{The Feedback Loop}
 
-The conversational guide connects production monitoring to development datasets:
-failing conversations can become retained scenarios for later evaluation.
-Production conversations are collected and assessed, while development runs
-exercise scenarios and inspect their results~\parencite{DeepEval:MultiTurn}.
+DeepEval's conversational guide connects production monitoring to development:
+failing conversations can become evaluation cases added to the development
+dataset~\parencite{DeepEval:MultiTurn}. Figure~\ref{fig:case-deepeval} shows
+the capabilities supporting this return path.
 
-Curation appears in the preparation of the retained examples, called
-\emph{goldens}. Annotation queues organize review, and dataset management supports
-expected outputs, contextual information, and review before finalization.
-These activities provide a connection between an observed interaction and the
-expectations used in future assessments~\parencite{ConfidentAI:AnnotationQueues,
-ConfidentAI:Datasets}. Finalizing a golden establishes the readiness of evaluation
-data; it does not demonstrate that the application satisfies the case.
+\begin{figure}[H]
+  \centering
+  \input{figures/case-deepeval}
+  \caption{The feedback loop across DeepEval and Confident AI. Workflow rules
+    can route interactions to review queues or directly to datasets for review.}
+  \label{fig:case-deepeval}
+\end{figure}
+
+\paragraph{Monitoring.}
+Confident AI helps the team find interactions worth reviewing. It records
+application executions as traces and conversations as threads. Automated
+assessments, called metrics, and classifiers help identify possible problems.
+During trace evaluation, only metrics that do not require reference data, such
+as an expected answer, run~\parencite{DeepEval:MultiTurn,ConfidentAI:OnlineEvals}.
+
+For example, classifiers can label interactions as expressing negative
+sentiment. Signals highlights increases in such labels, and Failure Modes
+groups flagged traces into recurring problems with supporting
+evidence~\parencite{ConfidentAI:Classifiers,ConfidentAI:Signals,
+ConfidentAI:FailureModes}. User ratings and comments provide another source of
+candidates~\parencite{ConfidentAI:AnnotationQueues}.
+
+The Drift view compares production behavior across application versions. It
+reports sustained deterioration relative to a selected baseline version, using
+minimum sample requirements and statistical or relative-change criteria,
+depending on the metric~\parencite{ConfidentAI:Drift}. These findings help
+direct investigation after deployment.
+
+\paragraph{Curation.}
+Annotation queues organize selected interactions for human review. Reviewers
+can record a rating, an explanation, and an expected answer or conversational
+outcome~\parencite{ConfidentAI:AnnotationQueues}. Workflows can route matching
+interactions to these queues or add them directly to datasets for review in
+the dataset editor~\parencite{ConfidentAI:Workflows,ConfidentAI:Datasets}.
+
+DeepEval calls the retained records \emph{goldens}. A single-turn golden stores
+an input and may include a reference answer or context. A conversational golden
+describes a scenario and its expected outcome, without prescribing every
+message~\parencite{ConfidentAI:Datasets,DeepEval:MultiTurn}. For example, a
+golden could describe a customer requesting a refund after 45 days, with the
+expected outcome that the assistant explains the 30-day refund limit.
+
+Together, these records form the evaluation dataset. Team members can review
+and finalize goldens in the editor, approving the data for use in
+evaluations~\parencite{ConfidentAI:Datasets}. Finalization concerns the case's
+readiness for evaluation, not whether the application already passes it.
+
+\paragraph{Evaluation.}
+The team loads a dataset and chooses the metrics, which implement the scoring
+procedures used to assess behavior. Single-turn evaluation runs the application
+on each retained input~\parencite{DeepEval:AgentGuide}. For conversational
+evaluation, a simulator generates user messages from each golden's scenario
+and interacts with the application. Multi-turn metrics assess the resulting
+conversation~\parencite{DeepEval:MultiTurn}. Later application versions can
+therefore be tested on the retained inputs or scenarios.
 
 \subsection{Result Interpretation and Delivery Decisions}
 
-The agent guide describes metric thresholds and assertions that fail the build
-when evaluation criteria are not met~\parencite{DeepEval:AgentGuide}. This supports
-an implementation in which selected checks must pass. A team still needs to
-connect the resulting status to its integration or deployment policy.
+The development guides use datasets to compare application iterations on the
+same inputs or scenarios~\parencite{DeepEval:AgentGuide,DeepEval:MultiTurn}.
+This helps the team assess whether a proposed change improves behavior on
+those cases.
 
-The inspected guides do not specify how unresolved failing cases coexist with
-those assertions or how a report distinguishes continuing problems from new
-deterioration. A threshold determines whether an outcome meets a criterion;
-additional evidence is needed to determine whether a change introduced the
-problem. Available metadata could support such interpretation, but its presence
-does not demonstrate that a particular team uses it for that purpose.
+For CI, the team chooses passing thresholds for the metrics: the boundaries
+that determine whether their scores are acceptable. The agent guide uses
+\texttt{assert\_test} to check the selected metrics, with a failed metric
+causing the test and CI build to fail~\parencite{DeepEval:AgentGuide}. Only
+cases included in these checks affect their outcome; storing a golden in a
+dataset does not by itself make it a mandatory check.
 
-\subsection{Connections and Limitations}
+\subsection{Limitations}
 
-The documented return of production failures to development datasets supports
-the feedback loop. Dataset review and CI assertions provide concrete mechanisms
-for curation and evaluation. The evidence does not establish a team's complete
-process for tracking known limitations, confirming fixes, or changing a case's
-role after improvement. Those responsibilities remain unverified in the reviewed
-workflow, rather than demonstrated by the framework's installation alone.
+Under the illustrated CI rule, an included case that continues to fail also
+fails the build. The reviewed guides do not specify a policy for accepting
+known failures while rejecting new deterioration, or how production drift
+findings would affect that policy.
+
+The comparisons also require care. Production versions may handle different
+interactions, and the Drift documentation warns about comparisons between
+versions active during different periods~\parencite{ConfidentAI:Drift}.
+In development, reusing conversational goldens holds the scenarios constant,
+but simulated messages and application responses may still vary. These
+differences need to be considered when interpreting a change in results.
 
 \section{Braintrust}
 \label{sec:case-braintrust}
 
 \subsection{Context and Evidence}
 
-Braintrust's documented workflow connects instrumentation, observation,
-annotation, evaluation, and deployment~\parencite{Braintrust:Workflow}.
-The case uses the archived workflow, human-review, and dataset guides, supplemented
-by the October comparison and CI snapshots. Published interface examples show
-separate activities, not successive steps of one interaction observed in this
-study.
+Braintrust is a commercial platform for observing, reviewing, and evaluating AI
+applications. Its documentation describes five stages (instrument, observe,
+annotate, evaluate, and deploy) that form a feedback
+loop~\parencite{Braintrust:Workflow}. The evidence consists of the documentation
+for that workflow and for monitoring, human review, datasets, experiment
+comparison, and CI.
 
-\subsection{Monitoring, Curation, and Evaluation}
+\subsection{The Feedback Loop}
 
-Logs provide material for investigating application behavior. Reviewers can
-record judgments and expected values, and selected traces can be added to
-datasets. Experiments then assess changes on those retained examples
-\parencite{Braintrust:HumanReview,Braintrust:Datasets,Braintrust:Workflow}.
-The annotation stage makes preparation for evaluation explicit. For a defective
-answer, the retained expectation must describe the desired behavior; copying
-the observed answer alone would not establish the criterion for a correction.
+Figure~\ref{fig:case-braintrust} maps Braintrust's documented features to the
+three stages.
+
+\begin{figure}[H]
+  \centering
+  \input{figures/case-braintrust}
+  \caption{Braintrust's feedback loop. The dashed box marks the custom rule
+    the team defines to turn evaluation results into a CI decision.}
+  \label{fig:case-braintrust}
+\end{figure}
+
+\paragraph{Monitoring.}
+Logs record application interactions as traces. Dashboards show trends in
+scores and other metrics, helping reviewers narrow down concerning
+changes~\parencite{Braintrust:Dashboards}. Patterns, a feature in public
+preview, lets Braintrust's AI agent investigate traces and report recurring
+problems, including behavior that existing scorers do not measure. Each
+finding includes supporting traces~\parencite{Braintrust:Patterns}. User
+ratings, comments, and corrections provide another source of candidates for
+review~\parencite{Braintrust:UserFeedback}.
+
+\paragraph{Curation.}
+Reviewers assess selected traces and record expected behavior, such as a
+correct category or a free-text correction, in the trace's expected
+field~\parencite{Braintrust:HumanReview}. Selected traces can then be added
+to a dataset from the logs or review views~\parencite{Braintrust:Datasets}.
+A user correction can suggest an expected value for review. Once confirmed,
+that expectation can guide a scorer that checks an exact value or broader
+criteria.
+
+In Braintrust, a dataset is a versioned collection of evaluation cases. Each
+record contains an input and may include an expected output, metadata, and
+tags~\parencite{Braintrust:DatasetOverview}. For the refund example, a record
+could contain the customer's question and the expected response under the
+refund policy. The dataset stores the cases; running the application and
+assessing its outputs produces the experiment results.
+
+\paragraph{Evaluation.}
+The team specifies the dataset, the application function to execute, and the
+scorers that assess its outputs. A dataset can be selected by name and version
+so that later edits do not change the cases used in the
+evaluation~\parencite{Braintrust:DatasetUse}. Experiments can run each input
+several times as \emph{trials}, exposing behavior that varies between
+executions~\parencite{Braintrust:Comparison}.
 
 \subsection{Result Interpretation and Delivery Decisions}
 
-Braintrust supports comparisons against a baseline, exposing score changes for
-individual cases and allowing inspection of outputs and repeated trials
-\parencite{Braintrust:Comparison}. These mechanisms can support investigation
-of changes while continuing failures remain visible. Choosing a baseline does
-not, by itself, establish that its behavior was accepted. The team must also
-consider whether differences reflect application changes or assessment variability.
+Selecting a dataset determines which cases an evaluation runs. Selecting a
+\emph{baseline} determines which saved experiment supplies the reference
+results. In Braintrust's comparison view, the team can select another experiment
+as the baseline. For example, it could compare a proposed change with an
+experiment run on the deployed application. By default, Braintrust matches
+cases by their inputs and displays their scores and score differences side
+by side~\parencite{Braintrust:Comparison}.
 
-The CI guide describes pull-request reporting and customizable reporters that
-control the process outcome. Its default exception handling is distinct from a
-team's quality acceptance rule~\parencite{Braintrust:CI}. A report of deteriorating
-scores therefore needs a policy defining which results prevent a change from
-proceeding and how that decision is enforced.
+Score decreases appear in red and improvements in green. Reviewers can filter
+or sort the cases Braintrust labels as regressions~\parencite{Braintrust:Comparison}.
+In the terms of Section~\ref{sec:cd4ai-result-interpretation}, these are
+potential regressions. A case that scores poorly in both experiments may
+indicate a continuing limitation; a further decrease may indicate that the
+limitation has worsened.
+Figure~\ref{fig:braintrust-comparison-screen} shows a comparison with repeated
+executions grouped under the same input.
 
-\subsection{Connections and Limitations}
+\begin{figure}[!htbp]
+  \centering
+  % The source is 144 dpi. Show the first input group and its score column.
+  \includegraphics[trim={92.5bp 191bp 441bp 90bp},clip,width=\linewidth]
+    {braintrust-comparison-source.png}
+  \caption[Braintrust's comparison view grouped by input]{Braintrust's
+    comparison view, grouped by input. The expanded case contains three trials,
+    each with an \texttt{ExactMatch} score of 0\%; the comparison result shown
+    in purple is 100\%. The view brings repeated executions and score
+    differences together for inspection. Source: Braintrust's documentation,
+    cropped~\parencite{Braintrust:ComparisonScreenshot}.}
+  \label{fig:braintrust-comparison-screen}
+\end{figure}
 
-This case supports the documented feedback loop and provides mechanisms relevant
-to the interpretation discussed in Section~\ref{sec:cd4ai-result-interpretation}.
-Its comparison features make it possible to investigate changes without a
-mandatory division into separate datasets. The reviewed sources do not establish
-a particular team's policy for unresolved limitations, its choice of accepted
-reference behavior, or a case followed through a confirmed fix. The mapping
-therefore concerns documented responsibilities and configurable mechanisms,
-with those operational decisions left unverified.
+The experiments may contain only some of the same cases. Suppose the baseline
+contains A and B, while a later experiment also includes a newly curated case C.
+A and B can be compared, but C has no baseline result. Braintrust shows a
+missing comparison value when inputs cannot be matched~\parencite{Braintrust:Comparison}.
+C can still be assessed against its criteria. To compare its behavior across
+versions, the team could run the reference application version on the expanded
+dataset as well.
+
+The same example explains why comparing overall averages needs care. A
+difficult case C could lower the average without any deterioration on A or B.
+The guide recommends selecting a baseline from the same dataset when choosing
+one automatically~\parencite{Braintrust:Comparison}. Because datasets can
+evolve, the name alone does not ensure that the cases are identical: comparisons
+need a common set of cases and compatible assessment criteria.
+
+In CI, an action runs evaluations on pull requests and posts a comparison
+summary~\parencite{Braintrust:Comparison}. By default, evaluation exceptions
+fail the command; lower scores alone do not. To make quality results affect
+the outcome, the team defines a custom reporter that decides whether the run
+passes~\parencite{Braintrust:CI}.
+
+The comparison summary is also available to code~\parencite{Braintrust:Comparison}.
+A reporter could therefore implement a rule that tolerates continuing failures
+but blocks potential regressions, including worsening behavior on cases that
+already failed. This is a possible implementation; the reviewed sources do not
+specify such a policy for handling known limitations.
+
+\subsection{Limitations}
+
+The comparison guide does not describe a statistical test that distinguishes
+score decreases from run-to-run variation, although trials make that variation
+visible~\parencite{Braintrust:Comparison}. A reported decrease therefore needs
+investigation before it is attributed to an application change.
+
+The reference also needs to be chosen deliberately. With Git metadata and no
+explicit baseline, Braintrust selects the most recent experiment on the same
+branch~\parencite{Braintrust:Comparison}. That experiment may itself have been
+a failed attempt, rather than a version whose behavior the team accepted.
 
 \section{MLflow}
 \label{sec:case-mlflow}
 
 \subsection{Context and Evidence}
 
-The MLflow case examines archived documentation for regression testing, review
-queues, and evaluation datasets~\parencite{MLflow:RegressionGuide,
-MLflow:ReviewQueues,MLflow:Datasets}. These sources describe how captured behavior
-can inform subsequent checks. No MLflow server or evaluation was run for this
-review, and the published interface examples do not represent a cycle executed
-for the study.
+MLflow is an open-source platform with capabilities for tracing, human review,
+evaluation datasets, and scoring. The evidence consists of its guides on
+regression testing, review queues, and datasets~\parencite{MLflow:RegressionGuide,
+MLflow:ReviewQueues,MLflow:Datasets}, together with a Databricks guide on its
+managed MLflow offering~\parencite{Databricks:QualityLoop}.
 
-\subsection{Monitoring, Curation, and Evaluation}
+\subsection{The Feedback Loop}
 
-The documented loop begins with traces and feedback, identifies a failure, and
-turns it into an executable check with expected behavior. Review queues organize
-inspection and retain judgments or expectations. Traces can also become dataset
-records for later evaluations~\parencite{MLflow:RegressionGuide,
-MLflow:ReviewQueues,MLflow:Datasets}. Review and case preparation supply the
-curation responsibility; collecting traces alone would leave that connection
-incomplete.
+Databricks describes a quality loop: review traces, curate a dataset, define
+a scorer, modify the application, evaluate the fix, and monitor production
+again~\parencite{Databricks:QualityLoop}. MLflow's testing guide complements
+this sequence with tests that capture observed failures and run on subsequent
+changes~\parencite{MLflow:RegressionGuide}. Figure~\ref{fig:case-mlflow} maps
+these activities to CD4AI. Preparing the case and its criteria belongs to
+curation; implementing the application fix is part of development.
+
+\begin{figure}[H]
+  \centering
+  \input{figures/case-mlflow}
+  \caption{MLflow's feedback loop. The related Databricks quality loop also
+    describes applying scorers to live traffic during monitoring.}
+  \label{fig:case-mlflow}
+\end{figure}
+
+\paragraph{Monitoring.}
+Traces record inputs, outputs, and intermediate model calls, tool use, and
+retrieval steps, allowing the team to inspect where an interaction went
+wrong~\parencite{Databricks:QualityLoop}. Negative user feedback can identify
+candidates for review~\parencite{MLflow:RegressionGuide}. The Databricks
+quality loop also uses scorers on live traffic to find recurring or new
+problems~\parencite{Databricks:QualityLoop}.
+
+\paragraph{Curation.}
+Review queues organize selected traces and the questions reviewers should
+answer. Questions can ask for feedback on the observed output or for an
+expectation describing what the application should have produced. Answers
+are stored on the reviewed trace~\parencite{MLflow:ReviewQueues}.
+
+The team can export selected traces to a new or existing evaluation dataset,
+a collection of inputs that may include expected outputs. Expectations can
+be added before or after export~\parencite{MLflow:Datasets}. Alternatively,
+the team can write a test containing the input and checks for the desired
+behavior~\parencite{MLflow:RegressionGuide}. Both approaches make the reviewed
+situation available for later evaluation.
+
+\paragraph{Evaluation.}
+The team supplies the application function, evaluation data, and scorers.
+MLflow runs the function on the inputs and assesses its
+outputs~\parencite{MLflow:RegressionGuide}. The retained cases support
+assessing fixes, comparing versions, and checking established
+behavior~\parencite{MLflow:Datasets}. A scorer used here may also assess live
+interactions during monitoring, as described in the Databricks quality
+loop~\parencite{Databricks:QualityLoop}.
 
 \subsection{Result Interpretation and Delivery Decisions}
 
-The regression-testing guide distinguishes measuring performance across a dataset
-from enforcing particular behaviors through pass/fail assertions. In its example,
-every scorer must pass for every row; a failed assertion fails the CI job
-\parencite{MLflow:RegressionGuide}. Making that check mandatory for integration
-requires the corresponding repository policy.
+The regression-testing guide distinguishes measuring performance from enforcing
+acceptance criteria. A dataset evaluation can report scores across cases, such
+as the proportion of answers judged correct. A test uses assertions to require
+specified criteria to pass~\parencite{MLflow:RegressionGuide}. The two uses
+can share data and scorers; what differs is how the results affect a decision.
 
-The dataset guide identifies assessing fixes on problematic production examples,
-preserving behavior, and comparing versions as uses of evaluation
-\parencite{MLflow:Datasets}. These purposes fit the broader evaluation stage in
-CD4AI. The distinction between measurement and gating does not establish that
-a team necessarily stores their cases in two separate datasets.
+In the guide's example, every scorer must pass for every included case. A
+failed assertion fails the test and CI job, and MLflow records the checks and
+their explanations for inspection~\parencite{MLflow:RegressionGuide}. For
+example, a check could require an answer to follow a refund policy; its failure
+would fail the test even if other answers scored well.
 
-\subsection{Connections and Limitations}
+The dataset guide also describes comparing application versions on the same
+data~\parencite{MLflow:Datasets}. This can help assess whether a fix improves
+a retained case, whereas the assertion checks whether the current result meets
+its criteria.
 
-The sources provide a documented path from captured failures to subsequent checks,
-including an explicit assertion-based decision mechanism. They do not specify
-how temporarily permitted failures are tracked or distinguished from new
-regressions. Although the guide calls the retained checks regression tests,
-creating a check from a failure does not establish that the expected behavior
-has already been achieved. Its protective purpose must be interpreted alongside
-the application's history, as discussed in Chapter~\ref{chap:cd4ai}.
+\subsection{Limitations}
+
+The illustrated assertion does not distinguish a continuing failure from one
+introduced by a change. An included case that fails its criteria fails the
+check in either situation. The reviewed sources do not specify how known
+limitations would remain visible while some failures are permitted and others
+block delivery.
+
+The guides describe creating tests from observed failures and assessing fixes.
+Calling these checks regression tests expresses their intended protective use;
+it does not establish that the application previously passed them. That
+interpretation requires evidence of earlier behavior, as discussed in
+Section~\ref{sec:cd4ai-result-interpretation}.
 
 % Cross-case synthesis and implications for pattern refinement belong in
 % Chapter 6 (Discussion). Chapter 3 must document the final selection and

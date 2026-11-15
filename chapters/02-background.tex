@@ -36,6 +36,12 @@ between the two terms.
     exercise it, and criteria for assessing the resulting behavior. An expected
     outcome may be expressed through assertions or a rubric rather than a
     single reference answer.
+  \item[Scorer.] A procedure that assesses an application's output or behavior
+    against a criterion and returns an assessment, such as a numerical score
+    or a pass/fail result. For example, an LLM judge may assess whether an
+    answer follows a refund policy. The criterion specifies what is assessed;
+    the scorer applies it. A delivery policy determines how the result affects
+    deployment.
   \item[Test.] An executable check of expected behavior that may be used within
     an evaluation. Calling a check a test does not imply that the application
     or the assessment method is deterministic.
