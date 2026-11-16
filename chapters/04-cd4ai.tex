@@ -290,8 +290,11 @@ may therefore reproduce the conditions of a failure without reproducing the
 failure every time. To account for
 variability in the application or its evaluators, evaluation may exercise the
 same case multiple times to assess how consistently the application meets the
-expected behavior~\parencite{Grace:DemystifyingEvals:2026}. A single passing
-run does not establish that an intermittent defect has been resolved.
+expected behavior~\parencite{Grace:DemystifyingEvals:2026}. Summarizing repeated
+results as a pass rate or average score can make the performance estimate less
+sensitive to an unusually good or bad execution. This does not make the
+application itself less variable, and a single passing run does not establish
+that an intermittent defect has been resolved.
 
 When results vary across runs, statistical comparisons can help determine
 whether an observed deterioration provides evidence of a regression.

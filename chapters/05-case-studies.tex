@@ -318,9 +318,14 @@ Deciding whether such behavior has worsened becomes harder when failures are
 intermittent. Even under unchanged
 conditions, repeated evaluations may produce different outcomes. A failure in
 the proposed version may therefore reflect variation rather than a regression.
-Repeated evaluations can help establish whether the behavior has become less
-reliable---for example, whether a case that previously failed in roughly one
-out of ten executions now fails in six out of ten. The team must still decide
+Aggregating repeated results can provide a more stable estimate of performance
+than relying on one execution. Comparing these estimates can help assess
+whether behavior has become less reliable---for example, whether a case that
+previously failed in roughly one out of ten executions now fails in six out
+of ten. DeepEval's test runner can
+repeat each case a chosen number of times~\parencite{DeepEval:Flags}, but the
+reviewed documentation does not describe how the repeated results are
+summarized. The team must still decide
 how much evidence is needed to treat that difference as meaningful. Marking
 the case as flaky prevents it from blocking CI, but does not resolve this
 uncertainty.
@@ -337,12 +342,7 @@ loop~\parencite{Braintrust:Workflow}. The evidence consists of the documentation
 for that workflow and for monitoring, human review, datasets, experiment
 comparison, and CI.
 
-Two terms describe how Braintrust organizes evaluations. A \emph{scorer}
-assesses an application output and returns a score between 0 and
-1~\parencite{Braintrust:Scorers}. It plays a role similar to a DeepEval metric
-(Section~\ref{sec:case-deepeval}): the same scoring logic can assess different
-cases, using each case's expected output as a reference when needed. An
-\emph{experiment} records the outputs and scores of one evaluation run, similar
+In Braintrust, an \emph{experiment} records the outputs and scores of one evaluation run, similar
 to a DeepEval test run, and can be compared with other
 experiments~\parencite{Braintrust:DatasetUse,Braintrust:Comparison}.
 
@@ -370,7 +370,7 @@ what went wrong.
 Patterns provides another way to identify candidates for review. Braintrust's
 AI agent investigates traces and reports recurring problems, with supporting
 traces for each finding~\parencite{Braintrust:Patterns}. This can draw
-attention to problems that the configured scorers do not capture: the scores
+attention to problems that the configured automated checks do not capture: the scores
 reflect the criteria being assessed, which may not cover every kind of
 undesired behavior. Reviewers can inspect the supporting interactions to
 determine whether a reported pattern represents a problem that warrants
@@ -391,12 +391,11 @@ interaction and the user's feedback belongs to the subsequent curation stage.
 Reviewers assess selected traces and record what the application should have
 produced in the trace's expected field. They can choose from predefined
 options, such as the correct label for a classification task, or write the
-expected output as free text~\parencite{Braintrust:HumanReview}. The recorded
-expectation can then serve as the reference a scorer uses to assess later
-outputs~\parencite{Braintrust:DatasetUse}. Corrections from end users are also
-recorded as expected values~\parencite{Braintrust:UserFeedback}. Because a
-correction may be mistaken, CD4AI treats it as a candidate: a reviewer checks
-it before it serves as a reference.
+expected output as free text~\parencite{Braintrust:HumanReview}. Braintrust
+also stores user corrections as expected values~\parencite{Braintrust:UserFeedback}.
+To serve as reliable evaluation references, these corrections need to be
+reviewed, since a correction may itself be mistaken, as in the refund example
+above.
 
 Selected traces can then be added to a dataset from the logs or review
 views~\parencite{Braintrust:Datasets}. In Braintrust, a dataset is a versioned
@@ -404,16 +403,31 @@ collection of evaluation cases. Each record contains an input and may include
 an expected output, metadata, and
 tags~\parencite{Braintrust:DatasetOverview}. For the refund example, a record
 could contain the customer's question and the expected response under the
-refund policy. The dataset stores the cases; running the application and
-assessing its outputs produces the experiment results.
+refund policy.
 
 \paragraph{Evaluation.}
+Braintrust calls its output-assessment functions \emph{scorers}. They serve
+the same general purpose as DeepEval's metrics
+(Section~\ref{sec:case-deepeval}): assessing an application output and
+producing a score~\parencite{Braintrust:Scorers}. A scorer may use the case's
+expected answer as a reference, so the same scoring logic can assess cases
+with different expected answers~\parencite{Braintrust:DatasetUse}.
+
 The team specifies the dataset, the application function to execute, and the
-scorers that assess its outputs. A dataset can be selected by name and version
-so that later edits do not change the cases used in the
-evaluation~\parencite{Braintrust:DatasetUse}. Experiments can run each input
-several times as \emph{trials}, exposing behavior that varies between
-executions~\parencite{Braintrust:Comparison}.
+scorers that assess its outputs~\parencite{Braintrust:DatasetUse}. Experiments
+can run each input several times as \emph{trials}, and each trial is scored
+separately. Grouping trials by input provides aggregate statistics alongside
+the individual results~\parencite{Braintrust:Comparison}. These summaries can
+reduce dependence on a single execution, while the individual outputs and
+scores let reviewers inspect variation between trials.
+
+Evaluations can run from the command line or in CI. Braintrust provides a
+GitHub Action that runs evaluations on pull requests and posts the results as
+a comment; other CI systems can call the command-line tool
+directly. The documentation also suggests running only part of the dataset on
+pull requests as a quick check, and reserving the full evaluation for
+merges~\parencite{Braintrust:CI}. In that setup, the remaining cases are
+evaluated only after the change has been merged.
 
 \subsection{Result Interpretation and Delivery Decisions}
 
@@ -457,32 +471,29 @@ versions, the team could run the reference application version on the expanded
 dataset as well.
 
 The same example explains why comparing overall averages needs care. A
-difficult case C could lower the average without any deterioration on A or B.
-The guide recommends selecting a baseline from the same dataset when choosing
-one automatically~\parencite{Braintrust:Comparison}. Because datasets can
-evolve, the name alone does not ensure that the cases are identical: comparisons
-need a common set of cases and compatible assessment criteria.
+difficult case C could lower the dataset's average score without any
+deterioration on A or B.
+Comparing matched cases avoids this problem and follows
+Section~\ref{sec:cd4ai-result-interpretation}: comparisons should use the same
+cases and assessment criteria.
 
-Showing a score decrease in the comparison view does not automatically make
-it block delivery. In CI, an action runs evaluations on pull requests and
-posts a comparison summary~\parencite{Braintrust:Comparison}. By default, an
-exception raised during evaluation makes the evaluation command fail. This
-indicates an execution error; an evaluation that completes but produces lower
-scores does not fail the command for that reason alone~\parencite{Braintrust:CI}.
+A score decrease reported on a pull request does not, by itself, fail the CI
+job. The pull request comment summarizes improvements and regressions against the
+baseline experiment~\parencite{Braintrust:Comparison}. By default, the
+evaluation command fails only when an evaluation raises an exception. Lower
+scores alone do not cause it to fail~\parencite{Braintrust:CI}.
 
-This also differs from DeepEval, where a metric's threshold determines whether
-a test passes and a failed test fails the CI job. A Braintrust scorer can be
-given an optional pass threshold, which marks its scores as passing or failing
-in the experiment view~\parencite{Braintrust:Autoevals}. The reviewed
-documentation does not describe this threshold as affecting the CI outcome.
+To make evaluation scores affect CI, the team can customize this behavior
+through a \emph{reporter}: code that processes the results and decides whether
+the evaluation command should fail~\parencite{Braintrust:CI}. Besides the
+current experiment's results, a reporter receives a summary computed by
+Braintrust: for each score, the change in average score relative to the
+baseline and the number of cases that improved or
+regressed~\parencite{Braintrust:SDKPython,Braintrust:SDKTypeScript}.
 
-To make these scores affect the CI outcome, the team defines a \emph{custom
-reporter}: code that processes evaluation results and decides whether they
-should make the CI job fail~\parencite{Braintrust:CI}.
-
-The comparison summary is also available to code~\parencite{Braintrust:Comparison}.
-A reporter could therefore implement a rule that tolerates continuing failures
-but blocks potential regressions, including worsening behavior on cases that
+A reporter could, for example, fail the command whenever a score has
+regressions. Such a rule would tolerate a case that scores equally poorly in
+both experiments while blocking worsening behavior, including on cases that
 already failed. This is a possible implementation; the reviewed sources do not
 specify such a policy for handling known limitations.
 
@@ -493,28 +504,30 @@ use them in CI decisions. Using these comparisons for regression protection
 still requires choosing an appropriate reference, interpreting the observed
 differences, and deciding which differences should block delivery.
 
-The reference needs to represent behavior that the team intends to preserve.
-With Git metadata and no
-explicit baseline, Braintrust selects the most recent experiment on the same
-branch~\parencite{Braintrust:Comparison}. That experiment may itself have been
-a failed attempt, rather than a version whose behavior the team accepted.
-The team therefore needs to check whether the selected baseline is appropriate
-for the delivery decision.
+Braintrust can select a baseline automatically~\parencite{Braintrust:Comparison},
+but the selected experiment may represent an unsuccessful attempt rather than
+behavior the team accepted. For example, the latest experiment might test a
+prompt that incorrectly approves refunds after 45 days. A candidate version
+that repeats that mistake would show no deterioration against this baseline,
+even if an earlier accepted version correctly refused the refund. The team
+therefore needs to check that the selected baseline represents behavior it
+intends to preserve.
 
 Even with an appropriate reference, a score decrease may reflect variation
-between executions. The comparison guide does not describe a statistical test
-that distinguishes score decreases from run-to-run variation, although trials
-make that variation visible~\parencite{Braintrust:Comparison}. A reported
-decrease therefore needs investigation before it is attributed to an
-application change.
+between executions. Repeated trials provide a basis for more stable
+performance estimates and let reviewers inspect variation between executions.
+However, the reviewed comparison guide does not specify a statistical test
+for distinguishing ordinary variation from
+deterioration~\parencite{Braintrust:Comparison}. A reported decrease therefore
+needs investigation before it is attributed to an application change.
 
-Once the team has interpreted a difference, it must decide how that result
-affects delivery. The custom reporter provides a place to enforce this policy,
-but does not define it. For example, the team may tolerate a continuing known
-failure while rejecting further deterioration on the same case. The reviewed
-workflow leaves this distinction to the team, so displaying a comparison alone
-does not establish how known limitations and potential regressions will be
-handled in CI.
+Braintrust allows the team to implement delivery rules through a custom
+reporter, but the reviewed workflow does not provide a rule for distinguishing
+tolerated known failures from further deterioration. As in the DeepEval case,
+simply allowing a known case to fail can leave worsening behavior unchecked.
+For example, a case that previously failed occasionally might begin failing
+consistently. A reporter that always permits failures on that case would still
+allow CI to pass.
 
 \section{MLflow}
 \label{sec:case-mlflow}
@@ -523,17 +536,25 @@ handled in CI.
 
 MLflow is an open-source platform with capabilities for tracing, human review,
 evaluation datasets, and scoring. The evidence consists of its guides on
-regression testing, review queues, and datasets~\parencite{MLflow:RegressionGuide,
-MLflow:ReviewQueues,MLflow:Datasets}, together with a Databricks guide on its
-managed MLflow offering~\parencite{Databricks:QualityLoop}.
+regression testing, review queues, and datasets, and its API
+reference~\parencite{MLflow:RegressionGuide,MLflow:ReviewQueues,
+MLflow:Datasets,MLflow:CompareEvaluations}. Databricks offers MLflow as a
+managed service; this section also draws on a Databricks guide for a related
+workflow and for monitoring live traffic~\parencite{Databricks:QualityLoop}.
+Like Braintrust,
+MLflow calls the functions that assess application outputs \emph{scorers};
+they include LLM judges and code-based
+checks~\parencite{MLflow:RegressionGuide}.
 
 \subsection{The Feedback Loop}
 
-Databricks describes a quality loop: review traces, curate a dataset, define
-a scorer, modify the application, evaluate the fix, and monitor production
-again~\parencite{Databricks:QualityLoop}. MLflow's testing guide complements
-this sequence with tests that capture observed failures and run on subsequent
-changes~\parencite{MLflow:RegressionGuide}. Figure~\ref{fig:case-mlflow} maps
+MLflow's regression-testing guide describes a testing loop: run the
+application and review its traces, capture observed failures, turn each
+failure into a test, and run the tests in CI on later
+changes~\parencite{MLflow:RegressionGuide}. Databricks describes a related
+quality loop that also covers curating evaluation datasets, defining scorers,
+and monitoring production by applying scorers to live
+traffic~\parencite{Databricks:QualityLoop}. Figure~\ref{fig:case-mlflow} maps
 these activities to CD4AI. Preparing the case and its criteria belongs to
 curation; implementing the application fix is part of development.
 
@@ -546,9 +567,10 @@ curation; implementing the application fix is part of development.
 \end{figure}
 
 \paragraph{Monitoring.}
-Traces record inputs, outputs, and intermediate model calls, tool use, and
-retrieval steps, allowing the team to inspect where an interaction went
-wrong~\parencite{Databricks:QualityLoop}. Negative user feedback can identify
+MLflow records application interactions as traces, which the team can review
+to find where the application misbehaves~\parencite{MLflow:RegressionGuide}.
+Traces include inputs, outputs, and intermediate steps such as model calls,
+tool use, and retrieval~\parencite{Databricks:QualityLoop}. Negative user feedback can identify
 candidates for review~\parencite{MLflow:RegressionGuide}. The Databricks
 quality loop also uses scorers on live traffic to find recurring or new
 problems~\parencite{Databricks:QualityLoop}.
@@ -575,6 +597,13 @@ behavior~\parencite{MLflow:Datasets}. A scorer used here may also assess live
 interactions during monitoring, as described in the Databricks quality
 loop~\parencite{Databricks:QualityLoop}.
 
+Tests built from retained cases are ordinary pytest functions marked as MLflow
+tests. Each test runs the application on its inputs with the selected scorers.
+The whole test session is recorded as a single MLflow run, in which each
+case's trace and assessment results can be inspected. Running the tests in CI
+therefore amounts to running pytest, for example on pull
+requests~\parencite{MLflow:RegressionGuide}.
+
 \subsection{Result Interpretation and Delivery Decisions}
 
 The regression-testing guide distinguishes measuring performance from enforcing
@@ -584,15 +613,39 @@ specified criteria to pass~\parencite{MLflow:RegressionGuide}. The two uses
 can share data and scorers; what differs is how the results affect a decision.
 
 In the guide's example, every scorer must pass for every included case. A
-failed assertion fails the test and CI job, and MLflow records the checks and
-their explanations for inspection~\parencite{MLflow:RegressionGuide}. For
+failed assertion fails the test, which fails the CI check and blocks the pull
+request~\parencite{MLflow:RegressionGuide}. The guide presents these tests as
+gates against known failures rather than as a way to track score trends. For
 example, a check could require an answer to follow a refund policy; its failure
 would fail the test even if other answers scored well.
 
-The dataset guide also describes comparing application versions on the same
-data~\parencite{MLflow:Datasets}. This can help assess whether a fix improves
-a retained case, whereas the assertion checks whether the current result meets
-its criteria.
+For comparing versions, MLflow provides an experimental function that compares
+two evaluation runs using statistical
+tests~\parencite{MLflow:CompareEvaluations}. It pairs each case in one run
+with the same case in the other and, for each scorer, assesses whether the
+differences across all paired cases are larger than would be expected by
+chance.
+
+This addresses variation between runs. Suppose a candidate version is
+evaluated on 100 refund questions with a pass/fail scorer. If it fails three
+questions that the baseline passed and passes two that the baseline failed,
+the difference is consistent with ordinary variation, and the test would not
+report it as significant. If it instead fails fifteen questions that the
+baseline passed and passes none that the baseline failed, the test would
+report a significant decline. The comparison therefore helps avoid treating
+small fluctuations as deterioration while still detecting a broad decline.
+
+Combining all cases, however, also hides changes in individual cases. If one
+refund case starts failing while the other cases are unchanged, the test would
+not report a significant difference. Similarly, if four questions about refund
+deadlines start failing while four about payment methods start passing, all
+assessed by the same scorer, the declines and improvements balance out, even
+though four retained behaviors have regressed. The test also does not show
+whether a particular case has become less reliable, which requires repeated
+executions of that case, as discussed in
+Section~\ref{sec:cd4ai-result-interpretation}. Identifying potential
+regressions in specific cases therefore still requires comparing those cases
+individually.
 
 \subsection{Limitations}
 
@@ -609,11 +662,18 @@ block delivery.
 Making this distinction requires evidence of earlier behavior. The guides
 describe creating tests from observed failures and assessing fixes. A case
 created while a defect remains unresolved may continue to fail until the fix
-is effective. Calling such checks regression tests expresses their intended
+is effective. Because a failed assertion blocks the pull request, such a test
+would block unrelated changes until the defect is resolved. Calling such checks regression tests expresses their intended
 protective use; it does not establish that the application previously passed
 them. Interpreting a later failure as a regression therefore requires a
 reference showing the behavior that had been established, as discussed in
 Section~\ref{sec:cd4ai-result-interpretation}.
+
+The guide also notes that LLM-judge assertions can be non-deterministic and
+recommends aligning judges with human
+feedback~\parencite{MLflow:RegressionGuide}. This addresses variation in the
+assessment; variation in the application itself means that a single passing
+run may not show that an intermittent defect has been fixed.
 
 % Cross-case synthesis and implications for pattern refinement belong in
 % Chapter 6 (Discussion). Chapter 3 must document the final selection and
