@@ -2,35 +2,138 @@
 \chapter{Methodology}
 \label{chap:methodology}
 
-\textbf{Draft outline.} Describe the research approach, case selection,
-evidence collection, and analysis procedure.
+This study examines CD4AI by comparing it with four cases: Divination, an
+AI-enabled system extended in this work to implement the pattern, and three
+tools whose documentation describes related workflows. This chapter describes
+how the pattern was formulated (Section~\ref{sec:method-pattern}), how the
+cases were selected (Section~\ref{sec:method-cases}), and what evidence was
+collected about them (Section~\ref{sec:method-evidence}). It then describes
+how each case was analyzed (Section~\ref{sec:method-analysis}), how the
+findings were used to assess the pattern (Section~\ref{sec:method-refinement}),
+and how AI tools were used in this work (Section~\ref{sec:method-ai}).
 
-% Existing material: ../plano-de-trabalho/sections/03-metodologia.tex
+\section{Pattern Formulation}
+\label{sec:method-pattern}
 
-% TODO: Describe the implementation of Divination's evaluation pipeline and
-% testing infrastructure as part of this work, distinguishing these contributions
-% from the existing application.
+The idea for CD4AI arose from the author's professional work on AI-enabled
+systems. Its initial version connected three stages in a feedback loop. A test
+stage in the delivery pipeline allowed deployment only when the regression
+suite passed. Monitoring collected data from the application in production.
+Curation selected the executions that showed problems, which the team then
+used to create fixes and new tests.
 
-% TODO: If the case repository is public before submission, describe it here
-% (archived source snapshots, figure sources) and give its URL.
+An early version of the pattern was presented at the MiniPLoP workshop held at
+XP~2026, in Brazil~\parencite{Iasco:CD4AI:2026}. The discussion did not change
+the pattern, but it produced recommendations on how to present it, as well as
+the suggestion to examine MLflow (Section~\ref{sec:method-cases}).
 
-% The sections below hold material moved from Chapter 5 (2026-11-08); rewrite
-% them when this chapter is drafted.
+The description was revised while Chapter~\ref{chap:cd4ai} was written and the
+cases were studied; both activities contributed to the revisions. The
+three-stage loop remained the same. The main change concerned how evaluation
+results inform delivery. The initial version prescribed a single rule: the
+whole regression suite had to pass. The revised description requires that
+results be interpreted against evidence of previous behavior and leaves the
+blocking rule to the team's delivery policy. It describes options for supplying
+that evidence and applying the policy, such as identifying cases that track
+known limitations, comparing results against one or more reference versions or
+stored reference runs, and using repeated executions or statistical tests when
+results vary between runs. In particular, the illustrative stored-history
+statistical comparison in Section~\ref{sec:cd4ai-result-interpretation} was
+inspired by the author's professional practice. Other revisions clarified the
+stages; for example, a monitoring signal does not confirm a defect, and curation
+prepares evaluation cases, while fixing the application belongs to development.
+
+Chapter~\ref{chap:cd4ai} presents the current version of the pattern,
+including its context, problem, forces, solution, and a worked example.
+
+\section{Case Selection}
+\label{sec:method-cases}
+
+The study examines four cases of two kinds: an application implementation and
+three external tool workflows. Divination is an AI-enabled system whose
+evaluation, monitoring, and curation infrastructure was implemented in this
+work, and its source code is publicly available. The other three---DeepEval
+with Confident AI, Braintrust, and MLflow---are platforms and frameworks for
+developing AI-enabled systems, examined through their documented workflows and
+supporting capabilities. The cases are considered individually before their
+similarities and differences are compared.
+
+At the beginning of the project, available tools were reviewed for workflows
+that appeared to share the pattern's structure. The three tools were selected
+because their workflows extend beyond running evaluations to observing use,
+reviewing interactions, and preparing evaluation cases from what is observed.
+Where an open-source framework relies on a companion platform to cover this
+cycle, both are examined together: DeepEval runs evaluations, while Confident
+AI supports monitoring, human review, and experiment comparison. MLflow's own
+guides describe the cycle, and a Databricks guide is used as a supplementary
+source for monitoring live traffic. Pydantic Evals, from the Pydantic AI
+project, was considered as an evaluation library but not selected, because it
+focuses on running evaluations; Logfire, Pydantic's observability platform, was
+not examined.
+
+Braintrust and DeepEval were already known to the author as evaluation tools.
+MLflow was suggested by an attendee at the MiniPLoP presentation as a possible
+match for the pattern. Other platforms with a similar scope, such as
+LangSmith, were not examined. Selection was therefore exploratory, guided by
+prior knowledge of the tools and a recommendation, rather than a systematic
+survey of the available tools. The cases support an examination of these
+workflows, not an estimate of how widespread the pattern is across AI-enabled
+systems.
+
+\subsection{Divination}
+\label{sec:method-divination}
+
+Divination is a conversational assistant that answers questions about
+Dungeons \& Dragons using retrieval-augmented generation. It was developed by
+Luiz Carlos Costa da Silva as a capstone project~\parencite{Silva:Divination:2025}.
+After the pattern was formulated, this work added infrastructure to implement
+it: an evaluation pipeline with single-turn and conversational evaluations;
+monitoring that stores the application's interactions in a database and flags
+possible problems; a page for reviewing interactions; and a CI runner that
+executes the evaluations, compares results against a stored reference baseline,
+and applies a delivery policy.
+
+The implementation avoids depending on a particular platform. The CI runner
+can run on a developer's machine, in a Git hook, or on a CI server; its GitHub
+Actions workflow is an optional adapter~\parencite{Divination:CI}. Implementing
+the stages directly keeps them visible in the source code, where they can be
+studied independently of any platform's features. The evaluations use
+DeepEval, which was chosen in order to study it. Another evaluation library
+could serve the same purpose, although the simulated conversations would
+require an equivalent feature or custom code. Divination thus shows the
+pattern implemented with general-purpose components, while the other cases
+show how dedicated platforms support related workflows.
+
+Because the author implemented this infrastructure to represent CD4AI, its
+correspondence with the pattern illustrates one implementation. It does not
+provide independent evidence that the same structure arose in another team's
+practice.
 
 \section{Evidence Collection}
 \label{sec:method-evidence}
 
-The documentary evidence consists of official documentation. Because online
-pages change, the reviewed pages were archived when they were accessed, and
-each reference gives its access date. Divination's references point to the
-specific source revision examined, so later changes to the project do not alter
-the material analyzed here.
+For the three tools, the evidence consists of their official documentation:
+guides describing workflows and reference pages describing specific
+capabilities. Because online pages change, the reviewed pages were archived
+when they were accessed, and each reference gives its access date. For
+Divination, the evidence consists of its source code and project
+documentation at a fixed revision, so later changes to the project do not
+alter the material analyzed.
+
+% TODO: If the case repository is public before submission, describe it here
+% (archived source snapshots, figure sources) and give its URL.
+
+The tools were also tried in a test setting to understand their features,
+and DeepEval was used in Divination's evaluations. None of them was used in a
+production environment for this study. Divination's interface examples use
+synthetic data and do not constitute an observed deployment.
+% TODO: Describe any further hands-on testing done before submission.
 
 Documentation can establish a recommended workflow or an available mechanism.
-Source inspection can establish how a mechanism is implemented. Neither alone
+Source inspection can establish how a mechanism is implemented. Neither
 establishes that a team completed the cycle or achieved a quality improvement.
-The external platforms were not operated for this study. Divination's synthetic
-interface examples also do not constitute an observed deployment experiment.
+Documentation may also be inaccurate or outdated, as discussed in
+Section~\ref{sec:discussion-threats}.
 
 \section{Analysis Procedure}
 \label{sec:method-analysis}
@@ -39,15 +142,74 @@ The external projects do not refer to CD4AI. Mapping their documented workflows
 to its stages is an interpretation made in this study, not a claim that they
 adopted the pattern.
 
-Evidence for the feedback loop is considered separately from evidence for
-interpreting results and applying a delivery policy. In particular, the analysis
-asks what supports a distinction between continuing limitations and deterioration
-in established behavior, and how that distinction affects development or
-delivery. It does not assume that cases occupy fixed required and optional groups.
+For each case, the documentation was first reviewed to determine whether it
+describes a workflow resembling the pattern's feedback loop. The features it
+describes were then mapped to the monitoring, curation, and evaluation stages,
+and the connections between the stages were checked: whether observed
+interactions can become evaluation cases, and whether those cases are evaluated
+on later changes. Finally, the analysis examined how evaluation results inform
+delivery decisions. AI assistants supported this review
+(Section~\ref{sec:method-ai}).
 
-A documented assertion or failed CI job establishes a mechanism for rejecting
-an evaluation result. Whether that result prevents integration or deployment
-also depends on the surrounding policy and its enforcement. Similarly, support
-for comparison or metadata does not establish how a team manages known issues.
+Each case is examined for two aspects separately: whether it supports the
+feedback loop connecting evaluation, monitoring, and curation (elements~1--3,
+addressing RQ1), and how it interprets evaluation results and connects them to
+delivery decisions, particularly when distinguishing continuing known
+limitations from potential regressions (elements~4 and~5, addressing RQ2). A
+case may support the feedback loop without specifying how evaluation results
+govern delivery.
+
+In assessing delivery mechanisms, the analysis distinguishes technical
+capabilities from team policy. A documented assertion or failed CI job
+establishes a mechanism for rejecting an evaluation result, whereas whether
+that result prevents integration or deployment also depends on the surrounding
+policy and its enforcement. Similarly, support for version comparison or case
+metadata does not by itself establish how a team manages known limitations.
 When the reviewed sources leave these matters unspecified, the case identifies
 an evidence gap rather than inferring that the behavior is present or absent.
+
+To apply this procedure consistently in Chapter~\ref{chap:case-studies}, each
+case study follows a four-part structure:
+\begin{description}
+  \item[Context and Evidence.] Introduces the system or platform, defines the
+    scope of the workflow examined, and identifies the primary sources
+    inspected.
+  \item[The Feedback Loop.] Traces how observations from use move through
+    monitoring, curation, and evaluation, and identifies which transitions are
+    automated or manual (addressing RQ1).
+  \item[Result Interpretation and Delivery Decisions.] Examines how evaluation
+    results are compared across versions, how variability and known limitations
+    are handled, and how outcomes connect to CI checks or release decisions
+    (addressing RQ2).
+  \item[Limitations.] Identifies what the implementation or documented workflow
+    leaves unresolved, what policy decisions remain with the team, and where
+    the available evidence is incomplete.
+\end{description}
+
+\section{Assessment of the Pattern}
+\label{sec:method-refinement}
+
+The assessment brings together the case findings to address RQ3 by identifying
+shared connections, implementation differences, and gaps in the available
+evidence. A correspondence supports the use of CD4AI to describe the examined
+workflow; it does not establish that adopting the pattern improves delivery
+outcomes.
+
+The findings may suggest changes to the pattern's description.
+Chapter~\ref{chap:discussion} presents these implications and distinguishes
+evidence about the examined cases from claims about other workflows.
+
+\section{Use of AI Tools}
+\label{sec:method-ai}
+
+% TODO (Step 8): Confirm that every cited source and technical claim has been
+% verified against the archived snapshots and source code before submission.
+AI assistants (Claude Code, OpenAI Codex, and Google Antigravity) were used
+during this project to support coding, documentation review, and writing. They
+assisted in implementing Divination's evaluation, monitoring, and curation
+infrastructure, exploring and summarizing tool documentation during the case
+analysis, checking consistency across chapters, drafting portions of the
+thesis, and revising the English prose for grammar, clarity, and style. The
+author selected the cases and primary sources and is responsible for verifying
+the cited documentation and source code, as well as for the implementation,
+analysis, and final text.

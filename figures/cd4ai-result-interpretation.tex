@@ -21,15 +21,15 @@
 
   % Interpretation of each combination.
   \node[cell, draw=black!45, fill=black!3] at (5.95,-1.73)
-    {\small\textbf{Behavior preserved}\\[1pt]
-     {\footnotesize Behavior still works}};
+    {\small\textbf{Still passing}\\[1pt]
+     {\footnotesize Criteria met in both versions}};
   \node[cell, draw=red!70!black, fill=red!4] at (10.65,-1.73)
     {\small\textbf{\textcolor{red!70!black}{Potential regression}}\\[1pt]
-     {\footnotesize Working behavior now fails}};
+     {\footnotesize Previously passing case now fails}};
   \node[cell, draw=green!50!black, fill=green!5] at (5.95,-3.23)
-    {\small\textbf{\textcolor{green!40!black}{Fix supported}}\\[1pt]
-     {\footnotesize Failing case now passes}};
+    {\small\textbf{\textcolor{green!40!black}{Improvement observed}}\\[1pt]
+     {\footnotesize Previously failing case now passes}};
   \node[cell, draw=orange!85!black, fill=yellow!8] at (10.65,-3.23)
     {\small\textbf{\textcolor{orange!85!black}{Continuing limitation}}\\[1pt]
-     {\footnotesize Known problem persists}};
+     {\footnotesize Criteria unmet in both versions}};
 \end{tikzpicture}

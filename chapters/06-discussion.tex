@@ -2,47 +2,48 @@
 \chapter{Discussion}
 \label{chap:discussion}
 
-% I think "forces and design trade-off" should be in discussion part
-\section{Forces and Design Trade-offs}
-\label{sec:cd4ai-forces}
+\textbf{To write:} chapter introduction.
 
-\noindent\emph{Working formulation: the following forces will be revisited
-as the case studies are developed.}
+\section{Cross-Case Comparison}
+\label{sec:discussion-comparison}
 
-Testability, robustness, and evolvability are desired qualities that can
-reinforce one another. Testability helps teams assess whether a proposed change
-preserves expected behavior before deployment. Robustness concerns the
-application's ability to maintain acceptable behavior under varying conditions,
-while evolvability concerns its ability to accommodate change. The evaluation
-suite must also evolve to remain useful as the application changes.
+\textbf{To write:} a table comparing the four cases across monitoring,
+curation, evaluation, and delivery, distinguishing documented support from
+decisions left to the team, followed by a short commentary (RQ1, RQ2).
 
-These qualities need not oppose one another in every pairwise comparison.
-The forces considered here instead express tensions between desired outcomes
-and the constraints on achieving them. The pattern aims to address three
-such tensions:
+\section{Recurring Findings}
+\label{sec:discussion-findings}
+
+\textbf{To write:} themes supported by at least two cases.
 
 \begin{itemize}
-  \item \textbf{Confidence in changes and delivery speed:} teams need evidence
-    that changes preserve expected behavior, but running more extensive
-    evaluations requires execution time and maintenance effort. The validation
-    process must fit the time and resources available for frequent delivery.
-  \item \textbf{Failure discovery and review capacity:} teams need to discover
-    failures beyond those covered by existing tests, but collecting more
-    candidate interactions increases the curation workload. Broad discovery
-    must be balanced with the capacity to review candidates and prepare useful
-    evaluation cases.
-  \item \textbf{Behavior preservation and adaptation:} historical regression
-    cases help check established behavior, but changing requirements can make
-    some expectations outdated. Teams must distinguish unintended regressions
-    from intended changes and maintain the suite accordingly.
+  \item The feedback loop is broadly supported, but curation relies on human
+    judgment.
+  \item Mechanisms for blocking delivery exist, but the policy for known
+    limitations and potential regressions is left to the team.
+  \item Variability is handled unevenly: repeated executions and aggregate
+    statistical comparisons answer different questions.
+  \item Choosing the reference version for comparisons is a team decision.
 \end{itemize}
 
-Evaluation, monitoring, and curation work together to address these tensions.
-Evaluation supplies evidence about proposed changes, monitoring supplies
-interactions for investigation, and curation determines which interactions
-should become evaluation cases and what behavior those cases should check.
-The cycle does not remove the costs or trade-offs; its implementation must
-establish how these responsibilities fit the team's delivery process.
+\section{Implications for CD4AI}
+\label{sec:discussion-implications}
+
+\textbf{To write:} what the case findings imply for the pattern's description
+and scope, including any supported clarifications or refinements (RQ3).
+Distinguish changes to the central loop from clarifications about evaluation
+and delivery; do not assume that the cases require structural revisions.
+
+\section{Design Trade-offs in the Cases}
+\label{sec:discussion-tradeoffs}
+
+Section~\ref{sec:cd4ai-forces} introduced the four tensions addressed by
+CD4AI: balancing confidence in changes with delivery speed, failure discovery
+with review capacity, behavior preservation with adaptation, and visibility of
+known limitations with a usable delivery signal. Evaluation, monitoring, and
+curation work together to address these tensions, without removing their
+underlying costs. The following subsections examine how these trade-offs appear
+in the analyzed cases and in practical implementation choices.
 
 % Writing notes:
 % Keep the desired qualities distinct from the concrete tensions above.
@@ -102,7 +103,7 @@ application meets its criteria; the delivery policy must determine how to
 proceed when the required evidence is unavailable.
 
 
-% I think "consequences and limitations" should be in discussion part
+% I think "consequences and limitations" should be in the discussion chapter.
 \section{Consequences and Limitations}
 \label{sec:cd4ai-consequences}
 
@@ -120,6 +121,25 @@ proceed when the required evidence is unavailable.
     and connections appear in different systems and workflows.
 \end{itemize}
 
-\textbf{Draft outline.} Compare the cases, discuss the research question,
-and explain limitations and threats to validity.
+\section{Answering the Research Questions}
+\label{sec:discussion-rq}
+
+\textbf{To write:} answers to RQ1--RQ3 and to the main research question
+(Section~\ref{sec:research-questions}).
+
+\section{Threats to Validity}
+\label{sec:discussion-threats}
+
+\textbf{To write:} limits of the study design.
+
+\begin{itemize}
+  \item The external cases rely on documentation; the platforms were not
+    operated.
+  \item The author implemented Divination's evaluation pipeline and also
+    analyzes it.
+  \item Vendor documentation changes; archived snapshots fix the evidence
+    examined.
+  \item Mapping the cases to CD4AI's stages is an interpretation.
+  \item Four cases limit how far the findings generalize.
+\end{itemize}
 

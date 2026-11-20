@@ -2,12 +2,12 @@
 \chapter{Case Studies}
 \label{chap:case-studies}
 
-This chapter examines how CD4AI's stages appear in Divination and in
-the documented workflows of DeepEval with Confident AI, Braintrust, and MLflow.
-The evidence varies: Divination provides an inspectable implementation, while
-the other cases provide documented workflows and supporting capabilities.
-Chapter~\ref{chap:methodology} describes how the cases were selected and
-analyzed.
+This chapter examines how CD4AI's stages and required elements appear in
+Divination and in the documented workflows of DeepEval with Confident AI,
+Braintrust, and MLflow. The evidence varies: Divination provides an inspectable
+implementation, while the other cases provide documented workflows and
+supporting capabilities. Chapter~\ref{chap:methodology} describes how the cases
+were selected and analyzed.
 
 Each case presents its context and evidence, explains how observations move
 through monitoring, curation, and evaluation, and examines how results inform
@@ -23,7 +23,8 @@ Divination is a conversational assistant that retrieves passages from a document
 corpus to answer questions about Dungeons \& Dragons. This case examines the
 evaluation pipeline and testing infrastructure added to Divination.
 
-The inspected revision includes evaluation suites, interaction storage,
+The inspected revision includes evaluation suites, reference-baseline
+comparison, a version-controlled delivery policy, interaction storage,
 candidate signals, and human
 review. The evidence consists of versioned source and project documentation,
 including the monitoring, evaluation, and CI guides~\parencite{Divination:Monitoring,
@@ -50,12 +51,14 @@ with information about the model, prompt, and document corpus used. Detectors
 flag possible problems, such as a numeric claim absent from the retrieved text.
 Negative user feedback also generates a signal~\parencite{Divination:Monitoring}.
 These signals identify interactions for review; they do not establish defects.
+The review panel also selects interactions by sampling stored records both with
+and without signals.
 
 \paragraph{Curation.}
-The review panel samples interactions both with and without signals. Reviewers
-inspect the answer and retrieved passages, then record a verdict and rationale.
-Signals are initially hidden to reduce their influence on the judgment.
-Reviewing unflagged interactions also helps reveal failures that the detectors
+In the review panel, reviewers inspect the sampled answer and retrieved
+passages, then record a verdict and rationale. Signals are initially hidden to
+reduce their influence on the judgment. Reviewing unflagged interactions also
+helps reveal failures that the detectors
 missed~\parencite{Divination:Monitoring}.
 Figure~\ref{fig:divination-review-screen} illustrates this review step.
 
@@ -97,48 +100,78 @@ by the retrieved passages~\parencite{Divination:Evaluations}.
 
 The case-creation guide instructs the developer to check that a new case
 exposes the defect, run it again with the proposed fix, and commit the case
-with the fix~\parencite{Divination:Evaluations}. The intended sequence is
-confirmation followed by regression protection: check that the change addresses
-the problem, then retain the case for later changes. One passing run may not
+with the fix, or retain the case as a declared known limitation while a fix is
+pending~\parencite{Divination:Evaluations}. The intended sequence supports both
+tracking unresolved defects and protecting established behavior once a fix
+succeeds. One passing run may not
 establish that an intermittent defect has been fixed, as discussed in
 Section~\ref{sec:cd4ai-result-interpretation}.
 
 The CI pipeline runs the single-turn evaluations automatically on pull requests
 using DeepEval, the evaluation framework examined alongside Confident AI in
-Section~\ref{sec:case-deepeval}. If an evaluation fails its required checks,
-the CI job is marked as failed~\parencite{Divination:CI}.
+Section~\ref{sec:case-deepeval}. A separate workflow runs the conversational
+evaluations on a weekly schedule and on manual
+request~\parencite{Divination:CI}. During runner-managed executions, Divination
+records per-case metric outcomes to a structured report and compares each case
+by name against a saved reference baseline when one is
+available~\parencite{Divination:CI,Divination:Evaluations}. Each matched case is
+classified as still passing, a potential regression, an observed improvement,
+or a continuing limitation; unmatched cases are reported as new or removed
+cases, and missing, skipped, or errored metrics are separated as incomplete
+assessments.
 
-\subsection{Limitations and Possible Improvements}
+Delivery decisions follow an explicit, version-controlled policy file
+(\texttt{policy.json})~\parencite{Divination:Evaluations}. By default, the
+runner blocks delivery on any potential regression, on any failing new case not
+declared as non-blocking, and on any incomplete assessment. Although DeepEval
+is invoked with error-tolerant options so that one judge failure does not abort
+the remaining cases, the policy layer inspects the recorded outcomes and blocks
+incomplete assessments rather than allowing them to pass
+silently~\parencite{Divination:CI}. Known limitations can be declared as either
+blocking or non-blocking; a non-blocking limitation is reported visibly without
+failing CI unless a previously passing metric on that case newly fails or a
+matched metric's score drops beyond a configured tolerance relative to the
+reference baseline, which detects newly failing metrics and larger score
+decreases on scored metrics.
 
-The pipeline connects reviewed defects to evaluations that run in CI. Further
-improvements could make it clearer which problems those evaluations cover and
-what their results mean for delivery.
+Dedicated runner commands record an accepted complete report from a clean
+commit as the reference baseline (\texttt{record-baseline}) and compare saved
+candidate and baseline reports offline (\texttt{eval-compare}). The reference
+baseline is stored in the local, gitignored state directory
+(\texttt{.ci-state/baseline-\textless suite\textgreater.json}) or supplied via
+\texttt{CI\_BASELINE\_PATH}; the default GitHub Actions pull-request workflow
+does not persist that file across runs, so automated baseline comparison
+currently operates on developer machines, persistent runners, or CI adapters
+configured to restore the baseline~\parencite{Divination:CI}.
 
-The current procedure adds an evaluation case together with the fix for
-the defect it captures. It could be extended to include cases whose defects
-have not yet been fixed. Recording which problems are already known and
-comparing results with a reference application version would help distinguish
-continuing failures from new or worsened behavior. The team could then define
-which known failures can be tolerated for delivery and which results should
-block a proposed change.
+\subsection{Limitations}
 
-Interpreting these results also requires knowing whether the assessments
-completed. The evaluation setup allows the run to continue when an assessment
-encounters
-an execution error or lacks required information. For example, an LLM judge
-may return an answer that the evaluator cannot parse. A successful CI job
-therefore does not guarantee that every assessment was completed. The CI
-summary could make this explicit by separating completed assessments that
-passed or failed from those that were skipped or encountered errors. These
-options do not implement a policy for tolerating known defects: they handle
-assessments that could not be completed, rather than answers assessed as
-incorrect.
+The pipeline connects reviewed defects to evaluations, baseline comparison, and
+an explicit delivery policy in CI. Several limitations remain in the
+implementation and in what it establishes.
 
-The coverage of these evaluations also depends on turning selected reviewed
-defects into cases that the pipeline can evaluate. This step currently
-requires manual work.
-Linking the review record to the resulting case would make it easier
-to see which reviewed defects have corresponding evaluation cases.
+First, baseline management and run-to-run variability remain lightweight.
+Promoting an accepted run to the reference baseline and updating
+known-limitation declarations in \texttt{policy.json} are explicit developer
+steps, and without baseline persistence in the GitHub Actions pull-request
+workflow, ephemeral PR runs evaluate cases against their own criteria without a
+baseline. Furthermore, the comparison operates on single-run per-case outcomes
+with a fixed score-drop tolerance (default~$0.1$) rather than repeated
+executions or statistical tests. Because LLM and judge scores vary across runs,
+ordinary variation alone can flip a case or exceed the tolerance and block an
+unchanged behavior.
+
+Second, turning a confirmed review verdict into an evaluation case remains
+manual. Linking each review record to its resulting dataset entry would make it
+easier to audit which confirmed defects have corresponding evaluation cases.
+
+Third, the reference-comparison and delivery-policy layer was exercised through
+offline unit, runner, and deterministic DeepEval recorder tests rather than
+operated over sustained live user traffic or repeated production model runs.
+Moreover, because this layer was added after the pattern's five required
+elements were finalized, Divination illustrates one self-contained
+implementation built to match the pattern rather than independent validation of
+its operational overhead or effectiveness.
 
 \section{DeepEval and Confident AI}
 \label{sec:case-deepeval}
@@ -322,13 +355,10 @@ Aggregating repeated results can provide a more stable estimate of performance
 than relying on one execution. Comparing these estimates can help assess
 whether behavior has become less reliable---for example, whether a case that
 previously failed in roughly one out of ten executions now fails in six out
-of ten. DeepEval's test runner can
-repeat each case a chosen number of times~\parencite{DeepEval:Flags}, but the
-reviewed documentation does not describe how the repeated results are
-summarized. The team must still decide
-how much evidence is needed to treat that difference as meaningful. Marking
-the case as flaky prevents it from blocking CI, but does not resolve this
-uncertainty.
+of ten. DeepEval's test runner can repeat each case a chosen number of
+times~\parencite{DeepEval:Flags}, leaving the team to decide how much evidence
+is needed to treat a difference across runs as meaningful. Marking the case as
+flaky prevents it from blocking CI, but does not resolve this uncertainty.
 
 \section{Braintrust}
 \label{sec:case-braintrust}
@@ -397,10 +427,10 @@ To serve as reliable evaluation references, these corrections need to be
 reviewed, since a correction may itself be mistaken, as in the refund example
 above.
 
-Selected traces can then be added to a dataset from the logs or review
-views~\parencite{Braintrust:Datasets}. In Braintrust, a dataset is a versioned
-collection of evaluation cases. Each record contains an input and may include
-an expected output, metadata, and
+In the documented workflow, team members add selected traces to a dataset
+through the logs or review views~\parencite{Braintrust:Datasets}. In
+Braintrust, a dataset is a versioned collection of evaluation cases. Each
+record contains an input and may include an expected output, metadata, and
 tags~\parencite{Braintrust:DatasetOverview}. For the refund example, a record
 could contain the customer's question and the expected response under the
 refund policy.
@@ -455,10 +485,10 @@ executions grouped under the same input.
     {braintrust-comparison-source.png}
   \caption[Braintrust's comparison view grouped by input]{Braintrust's
     comparison view, grouped by input. The expanded case contains three trials,
-    each with an \texttt{ExactMatch} score of 0\%; the comparison result shown
-    in purple is 100\%. The view brings repeated executions and score
-    differences together for inspection. Source: Braintrust's documentation,
-    cropped~\parencite{Braintrust:ComparisonScreenshot}.}
+    each with an \texttt{ExactMatch} score of 0\%; the baseline experiment's
+    comparison result shown in purple is 100\%. The view brings repeated
+    executions and score differences together for inspection. Source:
+    Braintrust's documentation, cropped~\parencite{Braintrust:ComparisonScreenshot}.}
   \label{fig:braintrust-comparison-screen}
 \end{figure}
 
@@ -516,9 +546,9 @@ intends to preserve.
 Even with an appropriate reference, a score decrease may reflect variation
 between executions. Repeated trials provide a basis for more stable
 performance estimates and let reviewers inspect variation between executions.
-However, the reviewed comparison guide does not specify a statistical test
-for distinguishing ordinary variation from
-deterioration~\parencite{Braintrust:Comparison}. A reported decrease therefore
+The reviewed comparison guide leaves deciding whether a score decrease reflects
+ordinary variation or genuine deterioration to the
+team~\parencite{Braintrust:Comparison}. A reported decrease therefore
 needs investigation before it is attributed to an application change.
 
 Braintrust allows the team to implement delivery rules through a custom
@@ -581,10 +611,11 @@ answer. Questions can ask for feedback on the observed output or for an
 expectation describing what the application should have produced. Answers
 are stored on the reviewed trace~\parencite{MLflow:ReviewQueues}.
 
-The team can export selected traces to a new or existing evaluation dataset,
-a collection of inputs that may include expected outputs. Expectations can
-be added before or after export~\parencite{MLflow:Datasets}. Alternatively,
-the team can write a test containing the input and checks for the desired
+In the documented workflow, the team exports selected traces to a new or
+existing evaluation dataset, a collection of inputs that may include expected
+outputs. Expectations can be added before or after
+export~\parencite{MLflow:Datasets}. Alternatively, the team writes a test
+containing the input and checks for the desired
 behavior~\parencite{MLflow:RegressionGuide}. Both approaches make the reviewed
 situation available for later evaluation.
 
@@ -614,33 +645,38 @@ can share data and scorers; what differs is how the results affect a decision.
 
 In the guide's example, every scorer must pass for every included case. A
 failed assertion fails the test, which fails the CI check and blocks the pull
-request~\parencite{MLflow:RegressionGuide}. The guide presents these tests as
+request when that check is required for
+merging~\parencite{MLflow:RegressionGuide}. The guide presents these tests as
 gates against known failures rather than as a way to track score trends. For
 example, a check could require an answer to follow a refund policy; its failure
 would fail the test even if other answers scored well.
 
 For comparing versions, MLflow provides an experimental function that compares
-two evaluation runs using statistical
+two evaluation runs using paired statistical
 tests~\parencite{MLflow:CompareEvaluations}. It pairs each case in one run
 with the same case in the other and, for each scorer, assesses whether the
 differences across all paired cases are larger than would be expected by
-chance.
+chance (using McNemar's test for binary outcomes or the Wilcoxon signed-rank
+test for numeric scores). The comparison result also provides an
+\texttt{assert\_improved} method to check for a statistically significant
+improvement at a chosen significance level, such as $\alpha = 0.05$.
 
-This addresses variation between runs. Suppose a candidate version is
-evaluated on 100 refund questions with a pass/fail scorer. If it fails three
-questions that the baseline passed and passes two that the baseline failed,
-the difference is consistent with ordinary variation, and the test would not
-report it as significant. If it instead fails fifteen questions that the
-baseline passed and passes none that the baseline failed, the test would
-report a significant decline. The comparison therefore helps avoid treating
-small fluctuations as deterioration while still detecting a broad decline.
+This comparison helps assess whether an overall difference across the dataset
+exceeds ordinary run-to-run variation. Suppose a candidate version is
+evaluated on 100 refund questions with a pass/fail scorer at $\alpha = 0.05$.
+If it fails three questions that the baseline passed and passes two that the
+baseline failed, the difference is not statistically significant under the
+paired test. If it instead fails fifteen questions that the baseline passed and
+passes none that the baseline failed, the test reports a significant decline.
+The comparison therefore helps avoid treating small dataset-level fluctuations
+as a systematic change while still detecting a broad shift.
 
 Combining all cases, however, also hides changes in individual cases. If one
 refund case starts failing while the other cases are unchanged, the test would
 not report a significant difference. Similarly, if four questions about refund
 deadlines start failing while four about payment methods start passing, all
 assessed by the same scorer, the declines and improvements balance out, even
-though four retained behaviors have regressed. The test also does not show
+though four cases show potential regressions. The test also does not show
 whether a particular case has become less reliable, which requires repeated
 executions of that case, as discussed in
 Section~\ref{sec:cd4ai-result-interpretation}. Identifying potential
@@ -655,25 +691,31 @@ expose a problem that remains unresolved, or behavior that has deteriorated?
 
 The illustrated assertion does not distinguish a continuing failure from one
 introduced by a change. An included case that fails its criteria fails the
-check in either situation. The reviewed sources do not specify how known
-limitations would remain visible while some failures are permitted and others
-block delivery.
+check in either situation. Because MLflow tests are ordinary pytest functions,
+a team could use standard pytest features to mark a known failing test, just as
+DeepEval provides the \texttt{flaky} flag; however, the reviewed MLflow sources
+do not specify a policy for keeping known limitations visible while permitting
+some failures and blocking further deterioration. Similarly, requiring a
+statistically significant improvement via \texttt{assert\_improved} differs
+from a regression gate that permits unchanged performance while rejecting
+deterioration.
 
 Making this distinction requires evidence of earlier behavior. The guides
 describe creating tests from observed failures and assessing fixes. A case
 created while a defect remains unresolved may continue to fail until the fix
-is effective. Because a failed assertion blocks the pull request, such a test
-would block unrelated changes until the defect is resolved. Calling such checks regression tests expresses their intended
-protective use; it does not establish that the application previously passed
-them. Interpreting a later failure as a regression therefore requires a
-reference showing the behavior that had been established, as discussed in
+is effective. When a passing CI check is required to merge a pull request, such
+a test blocks unrelated changes until the defect is resolved. Calling such
+checks regression tests expresses their intended protective use; it does not
+establish that the application previously passed them. Interpreting a later
+failure as a regression therefore requires a reference showing the behavior
+that had been established, as discussed in
 Section~\ref{sec:cd4ai-result-interpretation}.
 
 The guide also notes that LLM-judge assertions can be non-deterministic and
 recommends aligning judges with human
-feedback~\parencite{MLflow:RegressionGuide}. This addresses variation in the
-assessment; variation in the application itself means that a single passing
-run may not show that an intermittent defect has been fixed.
+feedback~\parencite{MLflow:RegressionGuide}. This concerns how well the judge
+reflects human assessment; variation in the application itself means that a
+single passing run may not show that an intermittent defect has been fixed.
 
 % Cross-case synthesis and implications for pattern refinement belong in
 % Chapter 6 (Discussion). Chapter 3 must document the final selection and

@@ -4,25 +4,23 @@
 
 CD4AI is a continuous delivery pattern that addresses the following problem:
 \enquote{How can teams turn failures observed during the use of AI-enabled
-systems into evaluation cases that support subsequent changes?}
+systems into evaluation cases, and use their results in delivery decisions
+without confusing known limitations with regressions?}
 This chapter presents the pattern and its feedback loop.
-Chapter~\ref{chap:case-studies} examines how its stages appear in selected
-systems and documented workflows.
+Chapter~\ref{chap:case-studies} examines how its elements appear in an
+implementation and in documented tool workflows.
 
 \section{Context, Problem, and Intent}
 \label{sec:cd4ai-context}
 
-% Context
-
-Foundation models are trained on broad data at scale and can be adapted to
-a range of downstream tasks~\cite{Bommasani:FoundationModels:2021}.
-Applications built around language foundation models can change their behavior
-through modifications to prompts, retrieved context, tools, and orchestration,
-without necessarily retraining the underlying
-model~\cite{Schluntz:BuildingEffectiveAgents:2024}.
-By avoiding a model-training cycle for such changes, application teams can
-shorten the implementation cycle and introduce behavioral changes within their
-ordinary software development workflow.
+\paragraph{Context.}
+Section~\ref{sec:background-ai} explains that applications built around
+language foundation models can change their behavior through modifications to
+prompts, retrieved context, tools, and orchestration without retraining the
+underlying model~\parencite{Schluntz:BuildingEffectiveAgents:2024}. By avoiding
+a model-training cycle for such changes, application teams can shorten the
+implementation cycle and introduce behavioral changes within their ordinary
+software development workflow.
 
 In this setting, evaluating AI-dependent behavior becomes part of the
 application team's delivery responsibilities, even when the team does not
@@ -31,12 +29,18 @@ may still require substantial evaluation. The resulting challenge is to assess
 its effects on established behavior while incorporating failures discovered
 during use into future evaluations.
 
+Applying CD4AI presupposes that the team deploys changes repeatedly through an
+automated delivery pipeline, can record enough interaction context from use to
+reproduce observed failures, and can allocate review capacity to turn selected
+failures into reusable cases. It also assumes that acceptable behavior can be
+checked against stated criteria during evaluation, whether by deterministic
+checks or rubric-based judges.
+
 % Optional motivation: add a concrete observation from the startup experience,
 % distinguishing personal observations from claims about development practices
 % in general. Keep implementation details for the relevant case study.
 
-% Problem
-
+\paragraph{Problem.}
 Initial evaluations cannot be assumed to cover every interaction that will
 emerge during use. Teams therefore need a process for identifying candidate
 failures, reviewing them, and turning confirmed defects into useful evaluation
@@ -50,44 +54,70 @@ failure report does not establish whether a proposed change introduced a
 regression or whether a known limitation persists. The evaluation process must
 retain enough context to interpret the result and support a delivery decision.
 
-% Intent
+\paragraph{Forces.}
+\label{sec:cd4ai-forces}
+Addressing this problem involves balancing four tensions:
+\begin{itemize}
+  \item \textbf{Confidence in changes and delivery speed:} teams need reliable
+    evidence that changes preserve expected behavior despite run-to-run
+    variation, but running more extensive or repeated evaluations increases
+    execution time and cost.
+  \item \textbf{Failure discovery and review capacity:} broad observation helps
+    surface unanticipated failures from use, but selecting more candidate
+    interactions increases the review workload.
+  \item \textbf{Behavior preservation and adaptation:} retained cases protect
+    established behavior, but changing requirements can make existing
+    expectations outdated unless the suite is maintained.
+  \item \textbf{Visibility of known limitations and a usable delivery signal:}
+    retaining cases for unresolved defects keeps them visible and helps assess
+    fixes, but requiring every retained case to pass can block changes because
+    of already known defects, whereas excluding or ignoring those cases hides
+    the limitation and any further deterioration.
+\end{itemize}
 
+\paragraph{Intent.}
 CD4AI aims to support frequent delivery while preserving established behavior
-by connecting evaluation, monitoring, and curation in a recurring feedback loop.
-Although applications built around language foundation models motivate the
-discussion here, the pattern is described in terms of these responsibilities,
+and keeping known limitations visible. Although applications built around
+language foundation models motivate the discussion here, the pattern is
+described in terms of evaluation, monitoring, and curation responsibilities,
 rather than a particular model or evaluation framework. Its intent is to make
 observed failures inform future validation, without guaranteeing that every
-failure will be discovered or that a previously observed defect will never recur.
+failure will be discovered or that a previously observed defect will never
+recur.
 
-Following the terminology in Section~\ref{sec:background-evaluation}, these
-cases can document unresolved limitations, support confirmation of fixes, and
-help detect regressions. The evaluation stage includes these purposes;
-creating a case does not imply that the corresponding defect has been fixed.
+Following the terminology in Section~\ref{sec:background-evaluation}, retained
+evaluation cases can document unresolved limitations, support confirmation of
+fixes, and help detect regressions. The evaluation stage includes these
+purposes; creating a case does not imply that the corresponding defect has been
+fixed.
 
-\section{Overview of the Feedback Loop}
+\section{Solution}
 \label{sec:cd4ai-overview}
+\label{sec:cd4ai-solution}
 
-CD4AI uses failures found during use to improve the evaluations run before
-future deployments. The team repeats three stages:
+CD4AI connects evaluation, monitoring, and curation in a recurring feedback
+loop, so that failures observed during use inform the evaluations run on later
+changes. The pattern requires five elements:
 
-\begin{description}
-  \item[Evaluation.] Run the existing evaluation cases against a proposed
-    change. Apply the team's delivery policy to decide whether the results
-    permit deployment or require further work.
-  \item[Monitoring.] Observe the deployed application and collect interactions
-    that may reveal failures for the team to investigate.
-  \item[Curation.] Review these interactions to identify actual problems.
-    Turn selected problems into evaluation cases that specify the expected
-    behavior and how to check it.
-\end{description}
+\begin{enumerate}
+  \item \textbf{Evaluation before delivery.} Proposed changes are evaluated
+    against retained cases in the delivery pipeline.
+  \item \textbf{Monitoring.} Interactions from use are selected as candidates
+    for review.
+  \item \textbf{Curation.} Candidates are reviewed, and selected problems
+    become evaluation cases that specify the scenario, the expected behavior,
+    and the assessment criteria.
+  \item \textbf{Result interpretation.} Evaluation results are interpreted
+    against evidence of previous behavior, so that continuing limitations can
+    be distinguished from potential regressions.
+  \item \textbf{Delivery policy.} A policy defined by the team determines
+    which results block delivery.
+\end{enumerate}
 
-The same assessment tool may help flag interactions during monitoring,
-review them during curation, and assess application versions during evaluation.
-Its purpose differs at each stage.
-
-Figure~\ref{fig:cd4ai-feedback-loop} summarizes the transitions between these
-stages and the return of curated cases to evaluation.
+Monitoring and curation provide elements~2 and~3; evaluation provides
+elements~1 and~4, and its results feed the delivery policy in element~5.
+Figure~\ref{fig:cd4ai-feedback-loop} summarizes the three stages and the return
+of curated cases to evaluation.
 
 \begin{figure}[htbp]
   \centering
@@ -101,18 +131,39 @@ stages and the return of curated cases to evaluation.
 The new cases are added to the evaluation suite and run against proposed fixes
 and later changes, closing the loop. Selected failures discovered during use
 therefore become part of what the team checks before future deployments.
-
 Application changes, including defect fixes, are implemented through the team's
-development process and assessed in the evaluation stage. Curation specifies cases
-and expected behavior; it does not itself repair the application. The diagram
-summarizes the flow of evaluation evidence rather than every development activity.
+development process and assessed in the evaluation stage; curation specifies
+cases and expected behavior rather than repairing the application. The diagram
+summarizes the flow of evaluation evidence rather than every development
+activity.
 
-CD4AI relies on a delivery policy that determines how evaluation results inform
-development and delivery decisions. Each implementation defines which outcomes prevent
-deployment and how other results inform tracking and improvement. Cases may
-track known limitations or protect established behavior against regressions.
-Section~\ref{sec:cd4ai-delivery-policy} discusses how teams can define and
-apply this policy.
+Beyond these five required elements, CD4AI leaves the concrete mechanisms at
+each stage as implementation options:
+\begin{itemize}
+  \item \textbf{Candidate selection:} which signals, sampling strategies, or
+    combinations select interactions for review
+    (Section~\ref{sec:cd4ai-monitoring}).
+  \item \textbf{Review and assessment methods:} whether review is performed by
+    people, automated tools, or both, and which assessment methods apply the
+    case criteria (Section~\ref{sec:cd4ai-curation}).
+  \item \textbf{Evidence of previous behavior and variability:} how previous
+    behavior is represented---such as results from a single reference version,
+    an aggregate across multiple reference runs or versions, or recorded
+    known-limitation markers---and whether evaluations use repeated executions
+    or statistical tests to handle run-to-run variation
+    (Section~\ref{sec:cd4ai-result-interpretation}).
+  \item \textbf{Policy rules and scheduling:} which outcomes block release, how
+    tolerated known limitations and incomplete assessments are handled, and
+    which cases run on each change versus on a broader schedule, where
+    scheduled evaluations of retained cases supplement pre-delivery checks and
+    can detect behavioral shifts caused by external dependencies such as model
+    updates (Section~\ref{sec:cd4ai-delivery-policy};
+    Section~\ref{sec:cd4ai-consequences}).
+\end{itemize}
+
+The same assessment method may help flag interactions during monitoring, review
+them during curation, and assess application versions during evaluation,
+although its purpose differs at each stage.
 
 The following sections explain monitoring, curation, and evaluation in more
 detail. Section~\ref{sec:cd4ai-worked-example} then follows a hypothetical
@@ -223,13 +274,13 @@ clear, the team can decide whether to retain the interaction as a reusable case.
 \subsection{Preparing Evaluation Cases}
 
 For each interaction selected for inclusion, curation prepares a reusable case
-with a scenario and assessment criteria. The scenario includes the input and
-any context needed to exercise the observed problem, such as conversation
-history, retrieved information, or tool state. The prepared case is retained
-for use in subsequent evaluations.
+with a scenario, the expected behavior, and assessment criteria. The scenario
+includes the input and any context needed to exercise the observed problem,
+such as conversation history, retrieved information, or tool state. The
+prepared case is retained for use in subsequent evaluations.
 
-Assessment criteria specify what the application must do for its response to
-be considered acceptable. They need not require the response to match a
+Assessment criteria specify the conditions that the application's behavior must
+satisfy to meet the expectation. They need not require an output to match a
 reference answer word for word. For example, several answers may correctly
 explain why a purchase is ineligible for a refund. The criteria can check
 whether the explanation correctly applies the refund policy, regardless of
@@ -241,6 +292,12 @@ A case can be retained before its defect is fixed, allowing the team to track
 the problem and assess proposed fixes. Whether a continuing failure blocks
 deployment is determined by the delivery policy, as discussed in
 Section~\ref{sec:cd4ai-delivery-policy}.
+
+An evaluation suite may also contain
+cases created before deployment to check initial requirements; CD4AI focuses on
+how observations from use are added to that suite. As requirements evolve,
+retained cases are reviewed and updated or retired when necessary so that
+intended behavioral changes are not misread as regressions.
 
 \section{Evaluation: Assessing Changes and Supporting Delivery}
 \label{sec:cd4ai-testing}
@@ -257,21 +314,33 @@ inform whether a proposed change can proceed or requires further work.
 A failing evaluation does not by itself show whether a proposed change
 introduced a problem or whether an existing limitation remains unresolved.
 Determining whether the change introduced the problem requires evidence about
-the application's previous behavior. As
-Figure~\ref{fig:cd4ai-result-interpretation} shows, comparing a case's results on
-the current version with those on the proposed version can help distinguish
-these situations. When evidence about previous behavior is unavailable,
-the team may identify a defect without yet determining whether it is a
-regression. Distinguishing continuing limitations from potential regressions
-can help teams identify new failures despite existing ones and keep unresolved
-limitations visible.
+the application's previous behavior. That evidence may come from results on a
+single reference version (such as the currently deployed version), an
+aggregate across compatible earlier runs or versions, or a recorded marker
+indicating that a case tracks a known limitation. A known-limitation marker
+records that a problem was previously observed, whereas comparing results
+across versions can also show whether the behavior has changed.
+
+Figure~\ref{fig:cd4ai-result-interpretation} illustrates the basic case-level
+comparison of binary pass/fail outcomes using the current version as the
+reference. Comparing matched cases individually prevents an improvement on one
+case, or the addition of a new case, from masking a deterioration on another
+case in a suite average. When a new case is added, evaluating the reference
+version supplies its baseline result; how much evidence is needed depends on
+run-to-run variability, as discussed below. When evidence of previous behavior
+is unavailable, a failure indicates that the assessment criteria were not met,
+without yet establishing whether the proposed change introduced a regression.
+Distinguishing continuing limitations from potential regressions helps teams
+identify new failures despite existing ones and keep unresolved limitations
+visible.
 
 \begin{figure}[htbp]
   \centering
   \input{figures/cd4ai-result-interpretation}
-  \caption{Interpreting a case by comparing its results on the current and
-    proposed versions. When a case runs repeatedly, pass and fail summarize
-    each version's runs, for example as pass rates.}
+  \caption{Interpreting a case by comparing binary outcomes on the current
+    (reference) version and the proposed version. With continuous scores or
+    repeated runs, a case that passes or fails in both versions can still
+    improve or deteriorate.}
   \label{fig:cd4ai-result-interpretation}
 \end{figure}
 
@@ -296,22 +365,46 @@ sensitive to an unusually good or bad execution. This does not make the
 application itself less variable, and a single passing run does not establish
 that an intermittent defect has been resolved.
 
-When results vary across runs, statistical comparisons can help determine
-whether an observed deterioration provides evidence of a regression.
-One possible implementation uses Fisher's exact
-test~\parencite{Fisher:DesignOfExperiments:1935, SciPy:FisherExact}. For each
-case, it compares how often each version passed across its runs, testing
-specifically for a lower pass rate in the proposed version (a one-sided test).
-Cases whose p-value falls below a chosen threshold are flagged for review.
+When results vary across runs, statistical comparisons can help assess whether
+an observed decrease provides evidence of a lower underlying pass rate rather
+than ordinary variation between runs, echoing the statistical framing of CI
+checks in systems such as \texttt{ease.ml/ci}
+(Section~\ref{sec:related-feedback}). One possible implementation maintains a
+stored history of pass and failure counts for each case from earlier runs, such
+as 30 recent executions under comparable conditions. That history can be
+initialized when the case is created or its criteria change, and frozen if a
+regression is confirmed, reducing the risk that the baseline absorbs a
+confirmed drop. Because the reference evidence is
+stored, the pipeline does not need to re-execute the reference version on every
+change. To keep routine CI runs fast and inexpensive, the proposed version can
+first run a case a few times (for example, 3 times) and run additional
+confirmation executions (for example, 7 more, pooled with the initial runs for
+10 in total) only when the initial results look unusually low compared with the
+case's history.
+
+A one-sided Fisher's exact test~\parencite{Fisher:DesignOfExperiments:1935,
+SciPy:FisherExact} then compares the pass and failure counts of the proposed
+version with those in the stored history. Assuming equal underlying pass rates,
+the test calculates how likely a drop in pass rate at least as large as the one
+observed would be; this probability is the $p$-value. For example, against 29
+passes and 1 failure in 30 historical runs, 7 passes and 3 failures in 10
+proposed runs give $p \approx 0.04$, whereas 8 passes and 2 failures give
+$p \approx 0.15$. A $p$-value below a chosen threshold, such as $0.05$, flags
+evidence of a lower pass rate for the delivery policy to block or review,
+without by itself proving that the application change caused the decrease.
+Conversely, neither stopping after the initial runs nor obtaining a $p$-value
+above the threshold establishes that behavior was preserved: a moderate drop
+may pass the initial runs or, as in the second example, provide insufficient
+evidence of a decrease across 10 runs. Testing many cases separately across a
+suite can also flag some unchanged cases by chance.
 
 \subsection{Delivery Policy}
 \label{sec:cd4ai-delivery-policy}
 
-The delivery policy specifies how evaluation results affect development and
-release decisions. Every delivery pipeline applies such a policy, even if only
-through the checks it runs; CD4AI does not prescribe its rules. A policy may
-use requirements for individual cases, thresholds across a suite, comparisons
-against an accepted baseline, or defined review procedures performed by people
+In CD4AI, the team defines a delivery policy that specifies how evaluation
+results affect integration and release decisions. A policy may use
+requirements for individual cases, thresholds across a suite, comparisons
+against a reference baseline, or defined review procedures performed by people
 or AI agents. The policy should identify the conditions for deployment and the
 action to take when those conditions are not met.
 
@@ -320,14 +413,16 @@ retained. A case that tracks a known limitation may still block release if it
 enforces a critical requirement, while other limitations may be reported under
 an explicit decision to defer their resolution. Such non-blocking results
 remain visible and inform follow-up work; they do not change the expected
-behavior or count as successful results.
+behavior or count as successful results. Tolerating a known limitation is
+distinct from ignoring the case: a permanently non-blocking flag does not by
+itself distinguish or block further deterioration, whereas comparing the
+case's results with earlier results allows the policy to tolerate an unchanged
+limitation while flagging further decline.
 
-Chapter~\ref{chap:case-studies} examines four case studies. For each, it
-considers two aspects separately: whether it supports the feedback loop, and
-how it connects evaluation results to delivery decisions, including how it
-handles known limitations and potential regressions. One may support the first
-without the second, for example by turning failures into evaluation cases
-without specifying how their results affect delivery.
+The policy should also specify how
+to handle incomplete assessments, such as evaluator timeouts or unparseable
+judge outputs, since an assessment that did not complete does not establish
+that the behavior met its criteria.
 
 \section{Worked Example: From an Observed Failure to a Delivery Decision}
 \label{sec:cd4ai-worked-example}
@@ -363,7 +458,8 @@ outside the refund window. An LLM judge assesses each answer against a rubric
 that checks whether it correctly explains the customer's ineligibility, without
 requiring a single exact phrasing. The case is added to the evaluation dataset
 even though the defect is not yet fixed, making it available to track the
-limitation and assess proposed fixes.
+limitation and assess proposed fixes. While the defect remains unresolved, the
+team's delivery policy treats this case as a non-blocking known limitation.
 
 Running the case sends the question, with its stored policy and purchase
 context, to the application version under test and passes the answer to the
@@ -379,21 +475,23 @@ the 30-day refund window}, meet the stated expectation, supporting the proposed
 fix.
 
 Before delivery, the proposed version also runs against the other cases in the
-suite, and the results reveal an unintended side effect of the change. One case
-asks about a purchase made 10 days ago and expects the
-assistant to confirm the refund. The current version passes this case, but the
-proposed version now denies the refund. Because the case passed before the
+suite, and the results reveal an unintended side effect of the change. One
+case, retained earlier, asks about a purchase made 10 days ago and expects the
+assistant to confirm the refund. The current version passes this case across
+its repeated executions, but the proposed version now denies the refund.
+Because the case passed before the
 change, this failure is a potential regression. The team's delivery policy
 requires established behavior to be preserved, so the change is blocked and
-returned to the developer for investigation, even though it fixes the 45-day
-answer. Figure~\ref{fig:cd4ai-delivery-decision} summarizes both results and
+returned to the developer for investigation, even though it supports the
+proposed fix for the 45-day answer. Figure~\ref{fig:cd4ai-delivery-decision}
+summarizes both results and
 the resulting decision.
 
 \begin{figure}[htbp]
   \centering
   \input{figures/cd4ai-delivery-decision}
   \caption{Evaluation results that inform the delivery decision. The proposed
-    version fixes the original case but fails a case that the current version
-    passes, so the delivery policy blocks the change.}
+    version supports the fix for the original case but fails a case that the
+    current version passes, so the delivery policy blocks the change.}
   \label{fig:cd4ai-delivery-decision}
 \end{figure}

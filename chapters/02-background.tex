@@ -2,19 +2,70 @@
 \chapter{Background and Related Work}
 \label{chap:background}
 
-\textbf{Draft outline.} Discuss continuous delivery, regression testing,
-AI-enabled systems, and the literature that motivates CD4AI.
+This chapter establishes the concepts and terminology used throughout the
+thesis and positions CD4AI in relation to existing work. It introduces
+continuous delivery and deployment pipelines
+(Section~\ref{sec:background-delivery}), the applications built with foundation
+models considered in this study (Section~\ref{sec:background-ai}), the testing
+and evaluation terminology adopted in later chapters
+(Section~\ref{sec:background-evaluation}), and the structure of software
+patterns (Section~\ref{sec:background-patterns}). It then reviews related
+approaches in AI engineering, observability, and evaluation
+(Section~\ref{sec:background-related-work}).
 
-% TODO: Define foundation models here, using Bommasani:FoundationModels:2021.
-% Distinguish foundation models from pretrained models in general, and explain
-% the role of language foundation models in the applications discussed later.
-% Once this explanation is written, replace the definition currently opening
-% Section 4.1 (sec:cd4ai-context) with a reference to this chapter, keeping the
-% application-development context in Chapter 4.
+\section{Continuous Delivery and Feedback from Use}
+\label{sec:background-delivery}
 
-% Temporary citation example; replace this paragraph when drafting the chapter.
-The existing work-plan bibliography includes a book on continuous
-delivery~\cite{Humble:ContinuousDelivery:2010}.
+Continuous integration (CI) is the practice of integrating code changes
+frequently and verifying each integration through an automated build and test
+process~\parencite{Fowler:ContinuousIntegration:2024}. Continuous delivery (CD)
+extends this automation through a \emph{deployment pipeline} so that the
+software is kept in a releasable state~\parencite{Humble:ContinuousDelivery:2010}.
+As a proposed change moves through the pipeline, automated checks provide
+feedback to developers and act as quality gates: if a required check fails, the
+pipeline prevents the candidate from advancing until the team investigates and
+resolves the issue~\parencite{Humble:ContinuousDelivery:2010}. Keeping the
+software releasable is distinct from automatically deploying every change to
+production; release remains a policy decision.
+
+Pre-deployment checks provide evidence within the scope of their inputs,
+criteria, and execution conditions; they do not cover every situation that may
+arise during use. Post-deployment monitoring and user feedback therefore
+complement pre-deployment testing by exposing unanticipated problems in
+production. In machine learning systems, \textcite{Sato:ContinuousDelivery4ML:2019}
+describe how Continuous Delivery for Machine Learning (CD4ML) combines pipeline
+testing with production monitoring so that observed production data can be fed
+back into subsequent model development. Chapter~\ref{chap:cd4ai} builds on
+these continuous delivery principles to connect production monitoring and
+curation to the evaluation suites run in the delivery pipeline.
+
+\section{AI-Enabled Systems and Foundation Models}
+\label{sec:background-ai}
+
+\textcite{Martinez:SE4AI:2022} define \emph{AI-based systems}---referred to in
+this thesis as \emph{AI-enabled systems}---as software systems whose
+functionality is enabled by at least one artificial intelligence component.
+While some AI-enabled systems use task-specific models trained for a single
+function, this thesis focuses on applications built around \emph{foundation
+models}: models trained on broad data at scale, typically through
+self-supervision, that can be adapted to a wide range of downstream
+tasks~\parencite{Bommasani:FoundationModels:2021}. Pretraining alone does not
+make a model a foundation model; the term emphasizes broad training and
+adaptability as a shared basis across tasks.
+
+In applications built with language foundation models, behavior depends not
+only on the model itself, but also on the surrounding application components,
+which may include prompts, information retrieved from external sources to supply
+context (retrieval-augmented generation, or RAG), external tools, and
+orchestration logic~\parencite{Schluntz:BuildingEffectiveAgents:2024}. Teams
+can therefore alter application behavior by modifying these components without
+retraining the underlying model.
+
+These applications can admit multiple valid outputs for the same input, so
+exact matching against a single reference string is not always sufficient.
+Their behavior can also vary across executions under unchanged conditions,
+requiring attention to run-to-run variation when interpreting evaluation
+results~\parencite{Grace:DemystifyingEvals:2026}.
 
 \section{Testing and Evaluation Terminology}
 \label{sec:background-evaluation}
@@ -28,20 +79,24 @@ between the two terms.
 
 \subsection{Evaluations, Cases, and Tests}
 
+In this thesis, evaluations assess selected aspects of an AI-enabled
+application's behavior, which may depend on models, prompts, retrieval, tools,
+and application logic.
+
 \begin{description}
   \item[Evaluation.] The assessment of application behavior against specified
     criteria. Results may include scores, pass/fail judgments, and summaries
     across cases or repeated executions.
-  \item[Evaluation case.] A retained input or scenario, the context needed to
-    exercise it, and criteria for assessing the resulting behavior. An expected
-    outcome may be expressed through assertions or a rubric rather than a
-    single reference answer.
-  \item[Scorer.] A procedure that assesses an application's output or behavior
-    against a criterion and returns an assessment, such as a numerical score
-    or a pass/fail result. For example, an LLM judge may assess whether an
-    answer follows a refund policy. The criterion specifies what is assessed;
-    the scorer applies it. A delivery policy determines how the result affects
-    deployment.
+  \item[Evaluation case.] An input or scenario retained for later evaluation,
+    together with the relevant context, the expected behavior, and the criteria
+    that the application's behavior must satisfy. The expected behavior need not
+    be a single reference answer.
+  \item[Assessment method.] A procedure that assesses an application's output or
+    behavior against a criterion and returns an assessment, such as a numerical
+    score or a pass/fail result. For example, an LLM judge may assess whether an
+    answer follows a refund policy. The criterion specifies the conditions being
+    checked; the assessment method applies it. A delivery policy determines how
+    the result affects deployment.
   \item[Test.] An executable check of expected behavior that may be used within
     an evaluation. Calling a check a test does not imply that the application
     or the assessment method is deterministic.
@@ -55,6 +110,11 @@ This thesis uses \emph{evaluation} as the general term for behavioral assessment
 and retains \emph{testing} when discussing executable checks and software
 testing practices. The choice of term does not by itself determine whether a
 result should block deployment.
+
+In the title of this thesis, \emph{continuous evaluation} refers to assessment
+repeatedly integrated into the delivery and feedback cycle. It does not require
+uninterrupted execution or a particular evaluation framework. The cycle
+supports evaluation of improvements as well as detection of regressions.
 
 \subsection{Known Limitations and Regressions}
 \label{sec:background-limitations-regressions}
@@ -91,19 +151,188 @@ Accordingly, a case documenting an unresolved defect remains useful even if it
 currently fails. It can record the desired behavior and help assess proposed
 fixes. Once that behavior is established, the same case can help detect its
 deterioration under later changes. A continuing failure on a known unresolved
-defect does not, by itself, demonstrate a new regression.
+defect does not, by itself, demonstrate a new regression. Retaining a case for
+evaluation is also distinct from deciding whether its failure blocks delivery;
+that decision depends on the application's delivery policy
+(Section~\ref{sec:cd4ai-delivery-policy}).
 
-\subsection{Retained Cases and Deployment Decisions}
+\section{Software Patterns}
+\label{sec:background-patterns}
 
-For CD4AI, retaining an evaluation case and deciding whether its result blocks
-deployment are separate decisions. Cases for unresolved defects should retain
-their expected behavior and make the unresolved status visible. Depending on
-the application's acceptance policy, such a failure may block a release or be
-reported as a known limitation whose resolution has been deferred. Retaining
-the case does not mean that the defect has been fixed or that the observed
-incorrect behavior has become acceptable.
+In software engineering, a \emph{pattern} documents a reusable solution to a
+recurring problem that arises within a specific context, together with the
+rationale for applying that solution~\parencite{Meszaros:PatternWriting:1997}.
+Rather than prescribing a specific software tool or a single fixed
+implementation, this thesis uses the pattern form to identify the core
+responsibilities and relationships that address the problem, allowing teams to
+adapt the concrete mechanisms to their own systems.
 
-In the title of this thesis, \emph{continuous evaluation} refers to assessment
-repeatedly integrated into the delivery and feedback cycle. It does not require
-uninterrupted execution or a particular evaluation framework. The cycle
-supports evaluation of improvements as well as detection of regressions.
+Drawing on the pattern elements described by
+\textcite{Meszaros:PatternWriting:1997}, in which the pattern name, context,
+problem, forces, and solution are mandatory elements and the remaining elements
+are optional, this thesis uses the following concepts:
+\begin{description}
+  \item[Pattern name.] A concise name by which the problem--solution pairing
+    can be referenced.
+  \item[Context and problem.] The \emph{context} defines the circumstances and
+    constraints under which the pattern applies, while the \emph{problem}
+    states the specific difficulty to be resolved within that context. Pattern
+    descriptions may also state the pattern's \emph{intent}, summarizing its
+    purpose.
+  \item[Forces.] The competing considerations, goals, and constraints that make
+    the problem difficult and shape the choice of solution.
+  \item[Solution.] The proposed arrangement of responsibilities and connections
+    that resolves the problem. In this thesis, the solution is specified by
+    distinguishing its required elements from the mechanisms left as
+    implementation options.
+  \item[Consequences.] The resulting context after applying the pattern,
+    including both its expected benefits and the costs, trade-offs, or
+    limitations it introduces.
+  \item[Examples and known uses.] Examples illustrate how a pattern can
+    operate; known uses document applications of the solution in existing
+    systems.
+\end{description}
+
+Chapter~\ref{chap:cd4ai} presents CD4AI's context, problem, forces, intent,
+solution, and a worked example. Chapter~\ref{chap:case-studies} then examines
+an implementation built for this study alongside three documented tool
+workflows, and Chapter~\ref{chap:discussion} discusses the pattern's design
+trade-offs, consequences, and limitations in light of those cases.
+
+\section{Related Work}
+\label{sec:background-related-work}
+
+The works discussed here address how observations of application behavior
+inform development, how agents are observed and assessed, and how people
+establish evaluation criteria. Selected through an exploratory search rather
+than a systematic literature review, they include research papers,
+architectural pattern catalogues, and practitioner guidance. The comparison
+focuses on the connections between these activities, including where a work
+addresses only part of the feedback loop described by CD4AI.
+
+\subsection{Feedback Loops in AI Development and Delivery}
+\label{sec:related-feedback}
+
+Learning from deployed behavior is already part of continuous delivery
+approaches for machine learning. \textcite{Sato:ContinuousDelivery4ML:2019}
+describe CD4ML as a process for delivering changes to code, data, and models.
+Their process combines testing and deployment with production monitoring;
+collected data can be reviewed and curated into new training datasets.
+CD4AI shares this connection between observations from use and subsequent
+development. Its focus is the preparation of evaluation cases for assessing
+application changes, which need not involve retraining a model. The difference
+concerns how the retained data is used in the described process.
+
+For foundation-model agents, \textcite{Grace:DemystifyingEvals:2026} recommend
+turning user-reported failures into evaluation tasks, defining clear success
+criteria, and maintaining the suite as the application evolves. Their guidance
+combines automated evaluation, production monitoring, and human review. This
+closely resembles CD4AI's loop: observations identify situations to examine,
+review establishes what should have happened, and retained cases support later
+checks. The article presents practical guidance drawn from agent development,
+rather than a single pattern specification.
+
+The connection to delivery also requires deciding how evaluation results affect
+a proposed change. For example, \textcite{Renggli:EaseMLCI:2019} present
+ease.ml/ci, in which developers specify integration conditions, including
+comparisons between models, together with error tolerances and reliability
+requirements. This provides a concrete treatment of evaluation-based
+integration decisions. Its statistical procedure is distinct from CD4AI's
+organization of the feedback loop, which leaves the assessment method and
+delivery policy to the implementation.
+
+\subsection{Patterns and Observability for Agents}
+\label{sec:related-agent-patterns}
+
+Pattern literature provides another perspective on these activities.
+\textcite{Heiland:AIPatterns:2023} distinguish newly proposed AI patterns from
+adaptations of established patterns and include process patterns alongside
+architectural and deployment patterns. This distinction is relevant to CD4AI:
+a pattern description may organize existing practices without introducing
+each practice individually.
+
+Within their catalogue for foundation-model agents,
+\textcite{Liu:AgentPatterns:2024} describe the \emph{Agent Evaluator} pattern.
+It assesses agents during development and operation using scenario-specific
+requirements, metrics, expected outputs, and test cases. Evaluation results
+can inform changes to both the agent and the evaluator. DeepEval is listed
+among its known uses, connecting this pattern to one of the cases examined in
+Chapter~\ref{chap:case-studies}.
+
+Agent Evaluator therefore overlaps with CD4AI in its use of assessment to guide
+adaptation. The distinction is one of emphasis: its solution describes an
+evaluation component and the feedback it produces, while CD4AI follows
+observations from use through review and case preparation into evaluations of
+subsequent application versions. The patterns can be complementary; an
+evaluation component does not by itself explain how production interactions
+are selected and retained as cases.
+
+Observability supplies information needed for that process.
+\textcite{Dong:AgentOps:2024} map AgentOps tools and propose a taxonomy of
+agent artifacts and associated trace data. Their analysis covers evaluation,
+user feedback, monitoring, and tracing. Feedback can be attached to execution
+traces, while inspection of individual steps helps investigate unexpected
+behavior. This gives a more detailed account of the evidence that can support
+CD4AI's monitoring stage.
+
+The comparison also clarifies the role of curation. Recording a trace or
+attaching feedback makes an interaction available for investigation. Preparing
+it for later evaluation additionally requires deciding what behavior to expect
+and how to assess it. CD4AI makes this transition an explicit part of the loop,
+without prescribing a particular tracing architecture.
+
+\subsection{Human Review and the Construction of Evaluation Criteria}
+\label{sec:related-curation}
+
+Review is more than assigning labels using criteria that are already settled.
+\textcite{Shankar:Validators:2024} study EvalGen, an interface that combines
+human grading with assistance in generating evaluation criteria and their
+implementations. Their user study identifies \emph{criteria drift}: examining
+outputs can lead people to add criteria or reinterpret existing ones. Thus,
+observing behavior and specifying how it should be assessed can influence each
+other.
+
+For CD4AI, this finding supports treating curation as a substantive development
+activity. A selected interaction may reveal an expectation that was previously
+implicit or ambiguous. Review must resolve that expectation sufficiently to
+prepare a useful case. EvalGen focuses on aligning evaluators with human
+judgments; it does not establish the operation or effectiveness of CD4AI's
+complete delivery loop.
+
+Practitioner guidance by \textcite{HusainShankar:EvalsFAQ:2026} connects this
+review work more directly to production feedback. They describe collecting
+traces, annotating problems, grouping related failures, and using the analysis
+to decide what to evaluate. They also recommend adding representative examples
+to a CI dataset when production monitoring reveals new failure patterns.
+This corresponds closely to the transition from monitoring through curation
+to evaluation. Their specific review techniques are possible implementations
+of that transition, rather than requirements of CD4AI.
+
+\subsection{Positioning CD4AI}
+\label{sec:background-positioning}
+
+Taken together, these works describe substantial parts of the process proposed
+by CD4AI, and some explicitly connect production feedback to later evaluations.
+The contribution pursued here is a pattern formulation that organizes these
+connections around five required elements and examines their correspondence
+with selected workflows. Specifically, the pattern requires evaluating proposed
+changes against retained cases in the delivery pipeline, selecting interactions
+from use for review, and curating selected problems into reusable cases with
+expected behavior and assessment criteria. It further requires interpreting
+results against evidence of previous behavior to distinguish continuing
+limitations from potential regressions, and applying a delivery policy to
+determine which results block delivery.
+
+The comparison therefore concerns more than whether a system provides logging,
+annotation, and evaluation features. It asks how material moves between those
+activities: which observations are reviewed, how expectations become assessment
+criteria, and how retained cases participate in later checks and delivery
+decisions. Chapter~\ref{chap:cd4ai} presents the proposed structure, and
+Chapter~\ref{chap:case-studies} examines its correspondence with an
+implementation and documented tool workflows. Neither the overlap with prior
+work nor that correspondence establishes a measured improvement from adopting
+the pattern.
+
+% Further reading: inspect the individual patterns in Xia et al.'s AgentOps
+% Pattern Catalogue and the original Continued Model Evaluation description
+% before adding detailed comparisons. The literature selection is exploratory.
